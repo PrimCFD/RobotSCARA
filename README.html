@@ -1,0 +1,194 @@
+<!doctype html>
+<html>
+ <head> 
+  <title>IntelliJ Markdown Preview</title>               
+  <style>/* Reworked by IntelliJ Team The MIT License (MIT) Copyright (c) JetBrains Adapted from https://github.com/sindresorhus/github-markdown-css The MIT License (MIT) Copyright (c) Sindre Sorhus &lt;sindresorhus@gmail.com&gt; (sindresorhus.com) Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */ @font-face { font-family: octicons-anchor; src: url(data:font/woff;charset=utf-8;base64,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) format('woff'); } body { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; font-family: Helvetica, Arial, freesans, sans-serif; font-size: 14px; line-height: 1.6; word-wrap: break-word; margin: 0 2em; } strong { font-weight: bold; } img { border: 0; } input { color: inherit; font: inherit; margin: 0; line-height: normal; } html input[disabled] { cursor: default; } input[type="checkbox"] { box-sizing: border-box; padding: 0; } body * { box-sizing: border-box; } input { font: 13px/1.4 Helvetica, arial, nimbussansl, liberationsans, freesans, clean, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol"; } a { text-decoration: none; } a:hover, a:active { text-decoration: underline; } hr { height: 1px; padding: 0; margin: 20px 0; border: 0 none; } hr:before { display: table; content: ""; } hr:after { display: table; clear: both; content: ""; } blockquote { margin: 0; } ul, ol { padding: 0; margin-top: 0; margin-bottom: 0; } ol ol, ul ol { list-style-type: lower-roman; } ul ul ol, ul ol ol, ol ul ol, ol ol ol { list-style-type: lower-alpha; } dd { margin-left: 0; } .octicon { font: normal normal normal 16px/1 octicons-anchor; display: inline-block; text-decoration: none; text-rendering: auto; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; } .octicon-link:before { content: '\f05c'; } .markdown-body &gt; *:first-child { margin-top: 0 !important; } .markdown-body &gt; *:last-child { margin-bottom: 0 !important; } .anchor { position: absolute; top: 0; left: 0; display: block; padding-right: 6px; padding-left: 30px; margin-left: -30px; } .anchor:focus { outline: none; } h1, h2, h3, h4, h5, h6 { position: relative; margin-top: 1em; margin-bottom: 16px; font-weight: bold; line-height: 1.4; } h1 .octicon-link, h2 .octicon-link, h3 .octicon-link, h4 .octicon-link, h5 .octicon-link, h6 .octicon-link { display: none; color: #000; vertical-align: middle; } h1:hover .anchor, h2:hover .anchor, h3:hover .anchor, h4:hover .anchor, h5:hover .anchor, h6:hover .anchor { padding-left: 8px; margin-left: -30px; text-decoration: none; } h1:hover .anchor .octicon-link, h2:hover .anchor .octicon-link, h3:hover .anchor .octicon-link, h4:hover .anchor .octicon-link, h5:hover .anchor .octicon-link, h6:hover .anchor .octicon-link { display: inline-block; } h1 { font-size: 2.2em; padding-top: 0.6em; } h1 .anchor { line-height: 1; } h2 { font-size: 1.8em; line-height: 1.2; padding-top: 0.6em; } h2 .anchor { line-height: 1.2; } h3 { font-size: 1.3em; line-height: 1; padding-top: 0.6em; } h3 .anchor { line-height: 1.2; } h4 { font-size: 1em; } h4 .anchor { line-height: 1.2; } h5 { font-size: 1em; } h5 .anchor { line-height: 1.1; } h6 { font-size: 1em; } h6 .anchor { line-height: 1.1; } p, blockquote, ul, ol, dl, table, pre { margin-top: 16px; margin-bottom: 16px; } ul, ol { padding-left: 2em; } ul ul, ul ol, ol ol, ol ul { margin-top: 0; margin-bottom: 0; } li &gt; p { margin-top: 0; margin-bottom: 0; } dl { padding: 0; } dl dt { padding: 0; margin-top: 16px; font-size: 1em; font-style: italic; font-weight: bold; } dl dd { padding: 0 16px; margin-bottom: 16px; } blockquote { padding: 10px 10px 10px 16px; border-left: 2px solid; border-radius: 0 3px 3px 0; } blockquote &gt; :first-child { margin-top: 0; } blockquote &gt; :last-child { margin-bottom: 0; } table { display: block; width: 100%; overflow: auto; word-break: normal; border-collapse: collapse; border-spacing: 0; font-size: 1em; } table th { font-weight: bold; } table th, table td { padding: 6px 13px; background: transparent; } table tr { border-top: 1px solid; } img { max-width: 100%; box-sizing: border-box; } code { font: 0.9em "JetBrains Mono", Consolas, "Liberation Mono", Menlo, Courier, monospace; padding: 0.2em 0.4em; margin: 2px; border-radius: 3px; } pre &gt; code { padding: 0; margin: 0; font-size: 100%; word-break: normal; white-space: pre; background: transparent; border: 0; } .highlight { margin-bottom: 16px; } .highlight pre, pre { font: 0.85em "JetBrains Mono", Consolas, "Liberation Mono", Menlo, Courier, monospace; padding: 16px; overflow: auto; line-height: 1.45; border-radius: 3px; } pre code { display: inline; max-width: initial; padding: 0; margin: 0; overflow: initial; line-height: inherit; word-wrap: normal; background-color: transparent; border: 0; } pre code:before, pre code:after { content: normal; } kbd { font: 0.9em "JetBrains Mono", Consolas, "Liberation Mono", Menlo, Courier, monospace; padding: 0.2em 0.4em; margin: 2px; border-radius: 3px; } .task-list-item { list-style-type: none; } .task-list-item + .task-list-item { margin-top: 3px; } .task-list-item input { margin: 0 0.35em 0.25em -0.6em; vertical-align: middle; } :checked + .radio-label { z-index: 1; position: relative; } span.user-del { text-decoration: line-through; } ::-webkit-scrollbar { width: 6px; height: 6px; } ::-webkit-scrollbar-thumb { -webkit-border-radius: 10px; } ::-webkit-scrollbar-track:vertical { -webkit-box-shadow: -1px 0 0 #ededed; } ::-webkit-scrollbar-track { background-color: transparent; } ::-webkit-scrollbar { width: 6px; } </style>
+  <style>body { background-color: rgba(43, 43, 43, 255.0); font-size: 14px !important; } body, p, blockquote, ul, ol, dl, table, pre, code, tr { color: rgba(169, 183, 198, 255.0); } a { color: rgba(88, 157, 246, 255.0); } table td, table th { border: 1px solid rgba(81, 81, 81, 255.0); } hr { background-color: rgba(81, 81, 81, 255.0); } kbd, tr { border: 1px solid rgba(81, 81, 81, 255.0); } h6 { color: rgba(120, 120, 120, 255.0); } blockquote { border-left: 2px solid rgba(88, 157, 246, 0.4); } ::-webkit-scrollbar-thumb { background-color: rgba(166, 166, 166, 0.2784313725490196); } blockquote, code, pre { background-color: rgba(212, 222, 231, 0.09803921568627451); }</style>
+  <style>/* Copyright 2000-2021 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file. */ .code-fence-highlighter-copy-button { float: right; display: flex; } .code-fence-highlighter-copy-button-icon { max-width: 1em; } .code-fence:hover .code-fence-highlighter-copy-button-icon { /*noinspection CssUnknownTarget*/ content: url("copy-button-copy-icon.png"); } .code-fence:hover .code-fence-highlighter-copy-button:hover .code-fence-highlighter-copy-button-icon { /*noinspection CssUnknownTarget*/ content: url("copy-button-copy-icon-hovered.png"); cursor: pointer; } </style>
+  <style>/* Copyright 2000-2021 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file. */ .run-icon &gt; img { max-width: 1em; vertical-align: text-top; margin-right: 0.3em; } .code-block { position: absolute; left: 1em; } .hidden { display: none; }</style>
+ </head> 
+ <body>
+  <div md-src-pos="0..4918">
+   <h1 md-src-pos="0..41">ð¦¾ SCARA Robot Simulation &amp; Control GUI</h1>
+   <p md-src-pos="42..169"><img src="http://localhost:63342/4f800f8a-bbed-4dd8-b03c-00449c9f6698/225437282/fileSchemeResource/b66f5262ab4ada70501d728819b32fd5-scara_icon.svg?_ijt=4mrnfks774avfvefa67r7433dl" alt="SCARA Robot Visualization" __idea-generated="true" md-src-pos="42..102" data-original-src="file:/C:/Users/antho/Desktop/COPR02/assets/images/scara_icon.svg"><br> <em md-src-pos="105..169">Advanced simulation and control platform for SCARA-type robots</em></p>
+   <p md-src-pos="171..493"><a href="https://www.python.org/" md-src-pos="171..265"><img src="https://img.shields.io/badge/python-3.8%2B-blue.svg" alt="Python 38" __idea-generated="true" md-src-pos="172..239"></a> <a href="https://opensource.org/licenses/MIT" md-src-pos="266..373"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License MIT" __idea-generated="true" md-src-pos="267..335"></a> <a href="https://github.com/yourusername/scara-robot/releases" md-src-pos="374..493"><img src="https://img.shields.io/badge/version-0.90-blue" alt="Version 090" __idea-generated="true" md-src-pos="375..438"></a></p>
+   <h2 md-src-pos="495..509">ð Features</h2>
+   <ul md-src-pos="510..907">
+    <li md-src-pos="510..582"><strong md-src-pos="512..532">3D Visualization</strong> - PyVista-based real-time kinematic visualization</li>
+    <li md-src-pos="583..652"><strong md-src-pos="585..605">Dynamic Modeling</strong> - Joint torque calculations and motor dynamics</li>
+    <li md-src-pos="653..725"><strong md-src-pos="655..677">Workspace Analysis</strong> - Reachability analysis and collision detection</li>
+    <li md-src-pos="726..793"><strong md-src-pos="728..751">Trajectory Planning</strong> - Angular velocity/acceleration profiling</li>
+    <li md-src-pos="794..856"><strong md-src-pos="796..812">Data Logging</strong> - CSV export/import for trajectory analysis</li>
+    <li md-src-pos="857..907"><strong md-src-pos="859..877">Cross-platform</strong> - Windows/Linux/macOS support</li>
+   </ul>
+   <h2 md-src-pos="909..917">Setup</h2>
+   <h3 md-src-pos="919..952">Automatic Setup (Recommended)</h3>
+   <p md-src-pos="953..965"><strong md-src-pos="953..964">Windows</strong>:</p>
+   <blockquote md-src-pos="968..983">
+    <p md-src-pos="969..983"><code md-src-pos="969..983">launcher.bat</code></p>
+   </blockquote>
+   <p md-src-pos="988..1004"><strong md-src-pos="988..1003">Linux/macOS</strong>:</p>
+   <blockquote md-src-pos="1007..1049">
+    <p md-src-pos="1008..1030"><code md-src-pos="1008..1030">chmod +x launcher.sh</code></p>
+    <p md-src-pos="1034..1049"><code md-src-pos="1034..1049">./launcher.sh</code></p>
+   </blockquote>
+   <p md-src-pos="1051..1069"><span md-src-pos="1051..1068">The launcher will</span>:</p>
+   <ul md-src-pos="1071..1175">
+    <li md-src-pos="1071..1104">Verify Python 3.8+ installation</li>
+    <li md-src-pos="1105..1150">Install required dependencies automatically</li>
+    <li md-src-pos="1151..1175">Launch the application</li>
+   </ul>
+   <p md-src-pos="1177..1193"><strong md-src-pos="1177..1193">Manual Setup</strong></p>
+   <p md-src-pos="1195..1216"><em md-src-pos="1195..1215">For advanced users</em>:</p>
+   <blockquote md-src-pos="1218..1254">
+    <p md-src-pos="1219..1252"><code md-src-pos="1219..1252">pip install -r requirements.txt</code></p>
+   </blockquote>
+   <h2 md-src-pos="1255..1277">Running the program</h2>
+   <p md-src-pos="1279..1298"><strong md-src-pos="1279..1298">Standard Launch</strong></p>
+   <p md-src-pos="1300..1344"><span md-src-pos="1300..1343">Use the launcher script for best experience</span>:</p>
+   <p md-src-pos="1346..1384"><strong md-src-pos="1346..1357">Windows</strong>: <span md-src-pos="1359..1384">Double-click launcher.bat</span></p>
+   <p md-src-pos="1386..1424"><strong md-src-pos="1386..1401">Linux/macOS</strong>: <span md-src-pos="1403..1410">Execute</span> <span md-src-pos="1411..1424">./launcher.sh</span></p>
+   <p md-src-pos="1426..1444"><strong md-src-pos="1426..1444">Developer Mode</strong></p>
+   <p md-src-pos="1446..1467"><span md-src-pos="1446..1466">For direct execution</span>:</p>
+   <blockquote md-src-pos="1469..1487">
+    <p md-src-pos="1470..1487"><code md-src-pos="1470..1487"><a class="run-icon hidden" href="#" role="button" data-command="Run:25ead141858d8d7b2979228d5080225f"><img src="http://localhost:63342/4f800f8a-bbed-4dd8-b03c-00449c9f6698/887555959/run.png?_ijt=4mrnfks774avfvefa67r7433dl"></a>python SCARA.py</code></p>
+   </blockquote>
+   <h2 md-src-pos="1489..1495">GUI</h2>
+   <p md-src-pos="1497..1551"><span md-src-pos="1497..1501">Here</span>'<span md-src-pos="1502..1549">s a quick video showing the features of the GUI</span> :</p>
+   <p md-src-pos="1553..1613"><img src="http://localhost:63342/4f800f8a-bbed-4dd8-b03c-00449c9f6698/225437282/fileSchemeResource/2ce3be8635ba3794db092c7283635987-Tutorial_video.gif?_ijt=4mrnfks774avfvefa67r7433dl" alt="Quick GUI Introduction" __idea-generated="true" md-src-pos="1553..1613" data-original-src="file:/assets/images/Tutorial_video.gif"></p>
+   <p md-src-pos="1615..1630"><span md-src-pos="1615..1628">This includes</span> :</p>
+   <blockquote md-src-pos="1631..1957">
+    <ol md-src-pos="1633..1957">
+     <li class="task-list-item" md-src-pos="1633..1692"><input type="checkbox" class="task-list-item-checkbox" checked="disabled">Visualizing current geometry with the PyVista Render</li>
+     <li class="task-list-item" md-src-pos="1695..1747"><input type="checkbox" class="task-list-item-checkbox" checked="disabled">Choosing target angles with 0.1 deg precision</li>
+     <li class="task-list-item" md-src-pos="1750..1781"><input type="checkbox" class="task-list-item-checkbox" checked="disabled">Animating the trajectory</li>
+     <li class="task-list-item" md-src-pos="1784..1837"><input type="checkbox" class="task-list-item-checkbox" checked="disabled">Computing joint torques for trajectory control</li>
+     <li class="task-list-item" md-src-pos="1840..1881"><input type="checkbox" class="task-list-item-checkbox" checked="disabled">Computing the Workspace accurately</li>
+     <li class="task-list-item" md-src-pos="1884..1906"><input type="checkbox" class="task-list-item-checkbox" checked="disabled">UX friendly GUI</li>
+     <li class="task-list-item" md-src-pos="1909..1957"><input type="checkbox" class="task-list-item-checkbox" checked="disabled">Exporting data as a csv file for analysis</li>
+    </ol>
+   </blockquote>
+   <p md-src-pos="1959..1978"><span md-src-pos="1959..1976">Upcoming features</span> :</p>
+   <blockquote md-src-pos="1980..2138">
+    <ol start="2" md-src-pos="1982..2138">
+     <li class="task-list-item" md-src-pos="1982..2029"><input type="checkbox" class="task-list-item-checkbox">Running a simulink PID stable controller</li>
+     <li class="task-list-item" md-src-pos="2032..2073"><input type="checkbox" class="task-list-item-checkbox">Starting/Stopping data acquisition</li>
+     <li class="task-list-item" md-src-pos="2076..2138"><input type="checkbox" class="task-list-item-checkbox">Having a real-time plot of measured vs shown trajectory</li>
+    </ol>
+   </blockquote>
+   <hr>
+   <h2 md-src-pos="2145..2167">Key Functionalities</h2>
+   <h3 md-src-pos="2169..2186">Robot Control</h3>
+   <ul md-src-pos="2188..2312">
+    <li md-src-pos="2188..2239">Real-time joint angle adjustment (0.1° precision)</li>
+    <li md-src-pos="2240..2270">Elbow position configuration</li>
+    <li md-src-pos="2271..2312">Velocity/acceleration constraints setup</li>
+   </ul>
+   <h3 md-src-pos="2314..2337">Visualization Tools</h3>
+   <ul md-src-pos="2339..2435">
+    <li md-src-pos="2339..2363">3D workspace rendering</li>
+    <li md-src-pos="2364..2386">Trajectory animation</li>
+    <li md-src-pos="2387..2435">Dynamic solution pathways (A/B configurations)</li>
+   </ul>
+   <h3 md-src-pos="2437..2458">Analysis Features</h3>
+   <ul md-src-pos="2460..2553">
+    <li md-src-pos="2460..2487">Motor torque calculations</li>
+    <li md-src-pos="2488..2521">Velocity/acceleration profiling</li>
+    <li md-src-pos="2522..2553">Inverse dynamics computations</li>
+   </ul>
+   <h3 md-src-pos="2555..2574">Data Management</h3>
+   <ul md-src-pos="2576..2656">
+    <li md-src-pos="2576..2603">Trajectory logging/replay</li>
+    <li md-src-pos="2604..2623">CSV export/import</li>
+    <li md-src-pos="2624..2656">Experiment metadata management</li>
+   </ul>
+   <h2 md-src-pos="2658..2678">Project structure</h2>
+   <blockquote md-src-pos="2680..4750">
+    <ul md-src-pos="2682..4750">
+     <li md-src-pos="2682..2781"><strong md-src-pos="2684..2697">./assets/</strong>
+      <ul md-src-pos="2702..2781">
+       <li md-src-pos="2702..2781"><strong md-src-pos="2704..2717">./images/</strong>
+        <ul md-src-pos="2724..2781">
+         <li md-src-pos="2724..2737"><em md-src-pos="2726..2737">plot_icon</em></li>
+         <li md-src-pos="2744..2758"><em md-src-pos="2746..2758">scara_icon</em></li>
+         <li md-src-pos="2765..2781"><em md-src-pos="2767..2781">Tutorial.gif</em></li>
+        </ul></li>
+      </ul></li>
+     <li md-src-pos="2784..2820"><strong md-src-pos="2786..2796">./bin/</strong> → Simulink Control</li>
+     <li md-src-pos="2823..2906"><strong md-src-pos="2825..2838">./buffer/</strong>
+      <ul md-src-pos="2843..2906">
+       <li md-src-pos="2843..2906"><em md-src-pos="2845..2857">buffer.csv</em> → Trajectory buffered before save (t, θ, φ)</li>
+      </ul></li>
+     <li md-src-pos="2909..3050"><strong md-src-pos="2911..2925">./configs/</strong>
+      <ul md-src-pos="2930..3050">
+       <li md-src-pos="2930..2990"><em md-src-pos="2932..2946">initial.json</em> → Geometrical configuration on launch </li>
+       <li md-src-pos="2995..3050"><em md-src-pos="2997..3008">temp.json</em> → Current Geometrical configuration </li>
+      </ul></li>
+     <li md-src-pos="3053..3449"><strong md-src-pos="3055..3066">./data/</strong> → Trajectory saving directory
+      <ul md-src-pos="3106..3449">
+       <li md-src-pos="3106..3334"><strong md-src-pos="3108..3126">/Experiment_1/</strong> → Experiment directory
+        <ul md-src-pos="3161..3334">
+         <li md-src-pos="3161..3238"><em md-src-pos="3163..3178">metadata.json</em> → Config file loaded when Experiment directory created</li>
+         <li md-src-pos="3245..3295"><em md-src-pos="3247..3265">Trajectory_1.csv</em> → Trajectories (t, θ, φ)</li>
+         <li md-src-pos="3302..3322"><em md-src-pos="3304..3322">Trajectory_2.csv</em></li>
+         <li md-src-pos="3329..3334">...</li>
+        </ul></li>
+       <li md-src-pos="3339..3449"><strong md-src-pos="3341..3359">/Experiment_2/</strong>
+        <ul md-src-pos="3366..3449">
+         <li md-src-pos="3366..3383"><em md-src-pos="3368..3383">metadata.json</em></li>
+         <li md-src-pos="3390..3410"><em md-src-pos="3392..3410">Trajectory_1.csv</em></li>
+         <li md-src-pos="3417..3437"><em md-src-pos="3419..3437">Trajectory_2.csv</em></li>
+         <li md-src-pos="3444..3449">...</li>
+        </ul></li>
+      </ul></li>
+     <li md-src-pos="3452..3731"><strong md-src-pos="3454..3466">./robot/</strong>
+      <ul md-src-pos="3471..3731">
+       <li md-src-pos="3471..3488"><em md-src-pos="3473..3488">__init__.py</em></li>
+       <li md-src-pos="3493..3532"><em md-src-pos="3495..3508">analytic.py</em> → Dynamic modeling</li>
+       <li md-src-pos="3537..3576"><em md-src-pos="3539..3547">gui.py</em> → <strong md-src-pos="3555..3563">PyQt</strong> Main window </li>
+       <li md-src-pos="3581..3629"><em md-src-pos="3583..3598">kinematics.py</em> → Inverse Kinematics (IK)</li>
+       <li md-src-pos="3634..3675"><em md-src-pos="3636..3645">misc.py</em> → Miscallenous functions</li>
+       <li md-src-pos="3680..3731"><em md-src-pos="3682..3692">scene.py</em> → <strong md-src-pos="3700..3711">PyVista</strong> QtInteractor widget</li>
+      </ul></li>
+     <li md-src-pos="3734..4199"><strong md-src-pos="3736..3748">./tests/</strong>
+      <ul md-src-pos="3753..4199">
+       <li md-src-pos="3753..3835"><strong md-src-pos="3755..3773">./integration/</strong> → Checks <strong md-src-pos="3788..3796">PyQt</strong> creation
+        <ul md-src-pos="3812..3835">
+         <li md-src-pos="3812..3835"><em md-src-pos="3814..3835">integration_test.py</em></li>
+        </ul></li>
+       <li md-src-pos="3840..4009"><strong md-src-pos="3842..3860">./performance/</strong> → Checks performance
+        <ul md-src-pos="3893..4009">
+         <li md-src-pos="3893..3918"><em md-src-pos="3895..3918">dynamics_perf_test.py</em></li>
+         <li md-src-pos="3925..3945"><em md-src-pos="3927..3945">gui_perf_test.py</em></li>
+         <li md-src-pos="3952..3979"><em md-src-pos="3954..3979">kinematics_perf_test.py</em></li>
+         <li md-src-pos="3986..4009"><em md-src-pos="3988..4009">memory_perf_test.py</em></li>
+        </ul></li>
+       <li md-src-pos="4014..4199"><strong md-src-pos="4016..4027">./unit/</strong> → Checks main functions
+        <ul md-src-pos="4063..4199">
+         <li md-src-pos="4063..4086"><em md-src-pos="4065..4086">config_test_test.py</em></li>
+         <li md-src-pos="4093..4108"><em md-src-pos="4095..4108">conftest.py</em></li>
+         <li md-src-pos="4115..4135"><em md-src-pos="4117..4135">dynamics_test.py</em></li>
+         <li md-src-pos="4142..4164"><em md-src-pos="4144..4164">kinematics_test.py</em></li>
+         <li md-src-pos="4171..4199"><em md-src-pos="4173..4199">velocity_profile_test.py</em></li>
+        </ul></li>
+      </ul></li>
+     <li md-src-pos="4202..4466"><strong md-src-pos="4204..4215">./docs/</strong>
+      <ul md-src-pos="4220..4466">
+       <li md-src-pos="4220..4335"><a href="file:/C:/Users/antho/Desktop/COPR02/docs/control.md" md-src-pos="4222..4255"><em md-src-pos="4223..4235">control.md</em></a> / <a href="file:/C:/Users/antho/Desktop/COPR02/docs/kindyn.html" md-src-pos="4258..4293"><em md-src-pos="4259..4272">kindyn.html</em></a> → Theory / choices for robot control</li>
+       <li md-src-pos="4340..4466"><a href="file:/C:/Users/antho/Desktop/COPR02/docs/kindyn.md" md-src-pos="4342..4373"><em md-src-pos="4343..4354">kindyn.md</em></a> / <a href="file:/C:/Users/antho/Desktop/COPR02/docs/kindyn.html" md-src-pos="4376..4411"><em md-src-pos="4377..4390">kindyn.html</em></a> → Theory / choices for kinematic/dynamic modeling</li>
+      </ul></li>
+     <li md-src-pos="4469..4483">.<em md-src-pos="4472..4483">gitignore</em></li>
+     <li md-src-pos="4486..4538"><em md-src-pos="4488..4503">launcher.bash</em> → Windows Launcher executable</li>
+     <li md-src-pos="4541..4596"><em md-src-pos="4543..4557">launcher.bat</em> → Linux/MacOS Launcher Executable</li>
+     <li md-src-pos="4599..4637"><em md-src-pos="4601..4614">launcher.py</em> → Launcher script</li>
+     <li md-src-pos="4640..4651"><em md-src-pos="4642..4651">LICENSE</em></li>
+     <li md-src-pos="4654..4681"><em md-src-pos="4656..4681">README.md / README.html</em></li>
+     <li md-src-pos="4684..4704"><em md-src-pos="4686..4704">requirements.txt</em></li>
+     <li md-src-pos="4707..4750"><em md-src-pos="4709..4719">SCARA.py</em> → Application Entry point</li>
+    </ul>
+   </blockquote>
+   <h2 md-src-pos="4752..4762">Control</h2>
+   <p md-src-pos="4764..4918"><span md-src-pos="4764..4776">The simulink</span> <em md-src-pos="4777..4782">C++</em> <span md-src-pos="4783..4814">export binary is located inside</span> <em md-src-pos="4815..4827"><strong md-src-pos="4816..4826">./bin/</strong></em><span md-src-pos="4827..4828">,</span> <span md-src-pos="4829..4872">for additional details you can read more in</span> <a href="file:/C:/Users/antho/Desktop/COPR02/docs/control.md" md-src-pos="4873..4917"><em md-src-pos="4874..4897"><strong md-src-pos="4875..4896">./docs/control.md</strong></em></a></p>
+  </div>&lt;
+ </body>
+</html>

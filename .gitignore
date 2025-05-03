@@ -1,0 +1,7 @@
+__pycache__
+venv
+scara_venv
+.venv
+.git
+.idea
+.benchmarks
