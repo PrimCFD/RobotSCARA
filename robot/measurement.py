@@ -10,32 +10,31 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 from robot.misc import constants
+import hashlib
 
 
 class TrajectoryLogger:
-    """Handles recording and storage of robot trajectory data.
-
-    Features:
-    - Time-stamped angle logging
-    - CSV buffer management
-    - Measurement session lifecycle control
-
-    Attributes:
-        buffer_path: Path to temporary storage file
-        current_data: Active measurement session data
-    """
-
     def __init__(self):
-
         package_root = Path(__file__).parent.parent
-        self.buffer_path = package_root / "buffer" / "buffer.csv"
+        self.buffer_path = package_root / "buffer" / "buffer_measure.csv"
         self.buffer_path.parent.mkdir(parents=True, exist_ok=True)
+
         self.current_data = []
         self.start_time = None
-        self.read_buffer()
+        self.results = None
+        self.sim_results = None
+        self.sim_hash = None
 
-        self.empty_buffer = True
-        self.empty_file = True
+        self.empty_buffer_measure = True
+        self.empty_file_measure = True
+
+        # Create the file if it doesn't exist
+        if not self.buffer_path.exists():
+            with open(self.buffer_path, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(["t", "theta", "phi"])
+
+        self.read_buffer()
 
     def start_new_trajectory(self):
         self.current_data = []
@@ -56,33 +55,128 @@ class TrajectoryLogger:
         self.read_buffer()
 
     def read_buffer(self):
-        # Now read CSV
         try:
+            if not self.buffer_path.exists():
+                self.empty_buffer_measure = True
+                return
 
             df = pd.read_csv(self.buffer_path)
-
-            # Expect the CSV to have columns t, phi_arc, theta_arc
             t = df['t'].to_numpy()
             theta_arc = df['theta'].to_numpy()
             phi_arc = df['phi'].to_numpy()
 
-            if all(np.array([len(t.tolist())>0, len(phi_arc.tolist())>0, len(theta_arc.tolist())>0])):
-                self.empty_buffer = False
-            else:
-                self.empty_buffer = True
+            self.empty_buffer_measure = not (len(t) > 0 and len(phi_arc) > 0 and len(theta_arc) > 0)
+            self.results = (constants(), t, phi_arc, theta_arc)
 
         except Exception as e:
-            self.empty_buffer = True
-            QMessageBox.critical(self, "CSV Error", f"Failed to load trajectory CSV:\n{e}")
-            return
-
-        # Prepare the result: constants + arrays
-        self.results = (constants(), t, phi_arc, theta_arc)
+            self.empty_buffer_measure = True
+            QMessageBox.critical(None, "CSV Error", f"Failed to load trajectory CSV:\n{e}")
 
     def delete_buffer(self):
         self.empty = True
         self.current_data = []
         self.save_to_buffer()
+
+
+class SimulationLogger:
+    def __init__(self):
+        package_root = Path(__file__).parent.parent
+        buffer_dir = package_root / "buffer"
+        buffer_dir.mkdir(parents=True, exist_ok=True)
+
+        self.simulation_buffer_path = buffer_dir / "buffer_simulation.csv"
+        self.sim_hash_path = buffer_dir / "buffer_hash.txt"
+
+        self.sim_results = None
+        self.sim_hash = None
+        self.empty_buffer_simulation = True
+
+        # Ensure simulation files exist
+        if not self.simulation_buffer_path.exists():
+            with open(self.simulation_buffer_path, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    "t", "x0", "x1", "x2",
+                    "x0_dot", "x1_dot", "x2_dot",
+                    "theta0", "theta1", "theta2",
+                    "theta0_dot", "theta1_dot", "theta2_dot",
+                    "tau0", "tau1", "tau2"
+                ])
+        if not self.sim_hash_path.exists():
+            with open(self.sim_hash_path, 'w') as f:
+                f.write("")
+
+        self.load_cached_simulation()
+
+    def compute_trajectory_hash(self, trajectory_data):
+        serialized = json.dumps(trajectory_data, sort_keys=True)
+        return hashlib.sha256(serialized.encode()).hexdigest()
+
+    def save_simulation_results(self, results, hash_value):
+        self.sim_results = results
+        self.sim_hash = hash_value
+
+        with open(self.simulation_buffer_path, 'w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=[
+                "t", "x0", "x1", "x2", "x0_dot", "x1_dot", "x2_dot", "theta0", "theta1", "theta2", "theta0_dot", "theta1_dot", "theta2_dot", "tau0", "tau1", "tau2"
+            ])
+            writer.writeheader()
+            for frame in results:
+                writer.writerow({
+                    "t": frame["t"],
+                    "x0": frame["x"][0], "x1": frame["x"][1], "x2": frame["x"][2],
+                    "x0_dot": frame["x_dot"][0], "x1_dot": frame["x_dot"][1], "x2_dot": frame["x_dot"][2],
+                    "theta0": frame["theta"][0], "theta1": frame["theta"][1], "theta2": frame["theta"][2],
+                    "theta0_dot": frame["theta_dot"][0], "theta1_dot": frame["theta_dot"][1], "theta2_dot": frame["theta_dot"][2],
+                    "tau0": frame["tau"][0], "tau1": frame["tau"][1], "tau2": frame["tau"][2],
+                })
+
+        with open(self.sim_hash_path, 'w') as f:
+            f.write(self.sim_hash)
+
+    def load_cached_simulation(self):
+        try:
+            if not self.simulation_buffer_path.exists() or not self.sim_hash_path.exists():
+                self.empty_buffer_simulation = True
+                return False
+
+            with open(self.sim_hash_path) as f:
+                self.sim_hash = f.read().strip()
+
+            with open(self.simulation_buffer_path) as f:
+                reader = list(csv.DictReader(f))
+                if not reader:
+                    self.empty_buffer_simulation = True
+                    return False
+
+                self.sim_results = []
+                for row in reader:
+                    try:
+                        frame = {
+                            "t": float(row["t"]),
+                            "x": [float(row["x0"]), float(row["x1"]), float(row["x2"])],
+                            "x_dot": [float(row["x0_dot"]), float(row["x1_dot"]), float(row["x2_dot"])],
+                            "theta": [float(row["theta0"]), float(row["theta1"]), float(row["theta2"])],
+                            "theta_dot": [float(row["theta0_dot"]), float(row["theta1_dot"]), float(row["theta2_dot"])],
+                            "tau": [float(row["tau0"]), float(row["tau1"]), float(row["tau2"])],
+                        }
+                        self.sim_results.append(frame)
+                    except (KeyError, ValueError) as e:
+                        print(f"[Cache] Malformed row in simulation buffer: {e}")
+                        self.empty_buffer_simulation = True
+                        return False
+
+                self.empty_buffer_simulation = len(self.sim_results) == 0
+                return not self.empty_buffer_simulation
+
+        except Exception as e:
+            print(f"[Cache] Failed to load simulation cache: {e}")
+            self.empty_buffer_simulation = True
+            return False
+
+    def needs_recompute(self, new_hash):
+        return new_hash != self.sim_hash
+
 
 
 

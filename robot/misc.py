@@ -75,9 +75,9 @@ def constants(cfg=None):
     y_shoulder = y_elbow + np.sqrt((l_humerus ** 2 - z_shoulder ** 2) / 2)
     vec_shoulder = np.array([x_shoulder, y_shoulder, z_shoulder])
 
-    m_1 = cfg["mass"]["m1"]
-    m_2 = cfg["mass"]["m2"]
-    m_3 = cfg["mass"]["m3"]
+    m_1 = cfg["mass"]["m_1"]
+    m_2 = cfg["mass"]["m_2"]
+    m_3 = cfg["mass"]["m_3"]
     m_d_seul = cfg["mass"]["m_d_seul"]
     m_bras = cfg["mass"]["m_bras"]
     m_d = m_d_seul + m_bras
@@ -346,3 +346,28 @@ def batch_matmul(A, B):
 
 def batch_matvecmul(A, B):
     return np.einsum('nmp,np->nm', A, B, optimize=True)
+
+def parse_simulation_result(sim_result):
+    """
+    Parses a list of SIL simulation JSON frames into structured NumPy arrays.
+
+    Args:
+        sim_result (List[Dict]): List of frames with keys 't', 'x', 'x_dot', 'theta', 'theta_dot', 'tau'.
+
+    Returns:
+        Tuple of numpy arrays:
+        - t: shape (N,)
+        - x: shape (N, 3)
+        - x_dot: shape (N, 3)
+        - theta: shape (N, 3)
+        - theta_dot: shape (N, 3)
+        - tau: shape (N, 3)
+    """
+    t = np.array([frame['t'] for frame in sim_result])
+    x = np.array([frame['x'] for frame in sim_result])
+    x_dot = np.array([frame['x_dot'] for frame in sim_result])
+    theta = np.array([frame['theta'] for frame in sim_result])
+    theta_dot = np.array([frame['theta_dot'] for frame in sim_result])
+    tau = np.array([frame['tau'] for frame in sim_result])
+    return t, x, x_dot, theta, theta_dot, tau
+

@@ -143,7 +143,26 @@ Upcoming features :
 >     - *plot_icon.svg*
 >     - *scara_icon.svg*
 >     - *{Title}.gif* &rarr; README gifs
-> - **./bin/** &rarr; Simulink Control
+> - **./backend/**
+>    - **./build/** &rarr; CMake build files
+>    - **./external/** 
+>      - **./qpOASES/** &rarr; QP control optimization Library
+>        - **./include/** &rarr; Headers
+>        - **./src/** &rarr; .cpp files to compile
+>    - **./include/**
+>      - **./boost/** &rarr; asio library
+>      - **./Eigen/** &rarr; Linear algebra library
+>      - **./nlohmann/** &rarr; json library
+>      - *RobotModel.hpp* &rarr; RobotModel class header
+>      - *SIL.hpp* &rarr; Header to be in server scope
+>      - *TorqueQP.hpp* &rarr; TorqueQP class header
+>    - **./src/**
+>      - *main_server.cpp* &rarr; IPC Server
+>      - *RobotModel.cpp* &rarr; Dynamics computations
+>      - *SIL.cpp* &rarr; Software in the loop simulation
+>      - *TorqueQP.cpp* &rarr; QP Torque Optimization
+>    - *CMakeLists.txt*
+> - **./bin/** &rarr; C++ binary : Server  + SIL/HIL
 > - **./buffer/**
 >   - *buffer.csv* &rarr; Trajectory buffered before save (t, θ, φ)
 > - **./configs/**
@@ -163,10 +182,14 @@ Upcoming features :
 > - **./robot/**
 >   - *\_\_init__.py*
 >   - *analytic.py* &rarr; Dynamic modeling
+>   - *controller.py* &rarr; Controller
 >   - *gui.py* &rarr; **PyQt** Main window 
+>   - *hil_client* &rarr; IPC Client for HIL
 >   - *kinematics.py* &rarr; Inverse Kinematics (IK)
 >   - *misc.py* &rarr; Miscallenous functions
 >   - *scene.py* &rarr; **PyVista** QtInteractor widget
+>   - *sil_client.py* &rarr; IPC Client for SIL
+>   - *sil_process.py* &rarr; SIL Server processing
 > - **./tests/**
 >   - **./integration/** &rarr; Checks **PyQt** creation
 >     - *integration_test.py*

@@ -5,3 +5,4 @@ scara_venv
 .git
 .idea
 .benchmarks
+.vscode

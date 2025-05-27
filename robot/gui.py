@@ -9,10 +9,12 @@ from robot.analytic import Plot_velo_accel
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtGui import QDoubleValidator, QIcon
 from PyQt5.QtWidgets import QPushButton, QStyle
-from robot.misc import constants, Cart_velocity_ramp, Cartesian_to_spherical, set_config, save_config, load_config
+from robot.misc import constants, Cart_velocity_ramp, Cartesian_to_spherical, set_config, save_config, load_config, parse_simulation_result
 from scipy.spatial import ConvexHull, Delaunay
 from skimage import measure
-from robot.measurement import TrajectoryLogger, FileBrowser
+from robot.measurement import TrajectoryLogger, SimulationLogger, FileBrowser
+from robot.sil_process import SILServerProcess
+from robot.sil_client import request_sil_simulation
 
 
 # Button styles
@@ -76,10 +78,9 @@ class WorkerThreadPlot(QtCore.QThread):
         self.m_1, self.m_2, self.m_3, self.m_d = constants()
 
     def run(self):
-        # Perform the heavy computation here
         try:
             theta_1p, theta_2p, theta_3p, theta_1pp, theta_2pp, theta_3pp, t, tau_1, tau_2, tau_3 = self.plot_window.compute_inv_dynamics(
-                self.h_1, self.h_2, self.h_3, self.l_11, self.l_21, self.l_31, self.m_1, self.m_2, self.m_3, self.m_d,
+                self.h_1, self.h_2, self.h_3, self.l_11, self.l_21, self.l_31, self.m_1[0], self.m_2[0], self.m_3[0], self.m_1[1], self.m_2[1], self.m_3[1], self.m_d,
                 self.l_arm_proth)
             self.result_signal.emit(theta_1p, theta_2p, theta_3p, theta_1pp, theta_2pp, theta_3pp, t, tau_1, tau_2,
                                     tau_3)
@@ -106,7 +107,6 @@ class WorkerThreadVelo(QtCore.QThread):
         self.theta, self.phi, self.theta_arc, self.phi_arc, self.omega_max, self.accel, self.p = theta, phi, theta_arc, phi_arc, omega_max, accel, p
 
     def run(self):
-        # Perform the heavy computation here
         try:
             p_dot, p_dotdot, t = Cart_velocity_ramp(self.l_arm_proth, self.theta, self.phi, self.theta_arc,
                                                     self.phi_arc, self.omega_max, self.accel, self.p)
@@ -136,6 +136,7 @@ class WorkerThreadWorkspace(QtCore.QThread):
             grid, nx, ny, nz, voxels_full = Compute_Workspace(*self.limits, *self.res)
             self.result_signal.emit(grid, nx, ny, nz, voxels_full)
         except Exception as e:
+            # Catch exceptions and emit the error signal with the error message
             # Catch exceptions and emit the error signal with the error message
             error_message = f"Error in worker thread: {str(e)}\n{traceback.format_exc()}"
             self.error_signal.emit(error_message)
@@ -187,6 +188,33 @@ class AcquisitionThread(QtCore.QThread):
             # Catch exceptions and emit the error signal with the error message
             error_message = f"Error in worker thread: {str(e)}\n{traceback.format_exc()}"
             self.error_signal.emit(error_message)
+
+        finally:
+            self.finished_signal.emit()  # Ensure this is always emitted
+
+
+class DynamicsThread(QtCore.QThread):
+    result_signal = QtCore.pyqtSignal(list)
+    finished_signal = QtCore.pyqtSignal()
+    error_signal = QtCore.pyqtSignal(str)
+
+    def __init__(self, trajectory_data):
+        """
+        Args:
+            trajectory_data: JSON of {{"t" : t, "x" : [x,y,z]}, ...]
+        """
+        super().__init__()
+        self.trajectory_data = trajectory_data
+
+    def run(self):
+        try:
+            # Send to SIL server
+            results = request_sil_simulation(self.trajectory_data)
+            self.result_signal.emit(results)
+
+        except Exception as e:
+            error_msg = f"Dynamics simulation failed: {str(e)}"
+            self.error_signal.emit(error_msg)
 
         finally:
             self.finished_signal.emit()  # Ensure this is always emitted
@@ -271,9 +299,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.log_sensor_data)
 
-        self.acquisition_freq = 200  # Acquisition freq in ms
+        self.acquisition_freq = 1  # Acquisition freq in ms
 
         self.trajectory_logger = TrajectoryLogger()
+        self.simulation_logger = SimulationLogger()
         self.file_browser = FileBrowser(self.trajectory_logger)
         self.file_browser.traj_constants_ready.connect(self.handle_traj_measure)
 
@@ -287,7 +316,19 @@ class MainWindow(QtWidgets.QMainWindow):
             border: 1px solid #c0c0c0;
         }
         """)
+
         self.start_btn.setEnabled(False)
+
+        self.simulate_dynamics_btn = QPushButton("Loading Workspace ...")
+        self.simulate_dynamics_btn.setStyleSheet("""
+        QPushButton:disabled {
+            background-color: #f0f0f0;
+            color: #a0a0a0;
+            border: 1px solid #c0c0c0;
+        }
+        """)
+        self.simulate_dynamics_btn.clicked.connect(self.run_dynamics_simulation)
+        self.simulate_dynamics_btn.setEnabled(False)
 
         # Button to change target position
         self.target_btn = QPushButton("Change Target Position")
@@ -380,6 +421,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.setup_ui()
 
+        self.sil_server = SILServerProcess()
+        self.sil_server.start(debug=True)
+
     def setup_ui(self):
         self.central_widget = QtWidgets.QWidget()
         self.setCentralWidget(self.central_widget)
@@ -446,6 +490,11 @@ class MainWindow(QtWidgets.QMainWindow):
         analysis_layout = QtWidgets.QVBoxLayout(analysis_group)
         analysis_layout.addWidget(self.velo_btn)
 
+        play_group = QtWidgets.QGroupBox("Preview")
+        play_layout = QtWidgets.QHBoxLayout(play_group)
+        play_layout.addWidget(self.start_btn)
+        play_layout.addWidget(self.simulate_dynamics_btn)
+
         measure_group = QtWidgets.QGroupBox("Measure")
         measure_layout = QtWidgets.QHBoxLayout(measure_group)
         measure_layout.addWidget(self.start_measure_button)
@@ -461,7 +510,7 @@ class MainWindow(QtWidgets.QMainWindow):
         side_panel_layout.addWidget(position_group)
         side_panel_layout.addWidget(visual_group)
         side_panel_layout.addWidget(analysis_group)
-        side_panel_layout.addWidget(self.start_btn)
+        side_panel_layout.addWidget(play_group)
         side_panel_layout.addWidget(measure_group)
         side_panel_layout.addWidget(save_group)
         side_panel_layout.addStretch()
@@ -472,15 +521,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.visualizer_layout = QtWidgets.QVBoxLayout(self.visualizer_container)
         self.h_layout.addWidget(self.visualizer_container, 1)
 
-    def compute_kinematics(self):
+    def compute_kinematics(self, x, y, z, arc_traj):
         self.p_0, self.phi_arc, self.theta_arc, self.p, self.vec_elbow, self.vec_shoulder, self.s_1a, \
         self.s_1b, self.s_2a, self.s_2b, self.s_3a, self.s_3b, self.d, self.v_1, self.v_2, self.v_3, self.m_1_point, \
-        self.m_2_point, self.m_3_point, self.z_vec, self.N_points = Compute_kine_traj(self.x_0, self.y_0, self.z_0,
+        self.m_2_point, self.m_3_point, self.z_vec, self.N_points = Compute_kine_traj(x, y, z,
                                                                                       self.theta * np.pi / 180,
                                                                                       self.phi * np.pi / 180, True,
-                                                                                      True)
+                                                                                      True, arc_traj)
 
-    def compute_and_update_visualizer(self):
+    def compute_and_update_visualizer(self, t=None):
         if not self.PyVistaCreated:
             self.visualizer = Pyvista3DScene(self.p_0, self.phi_arc, self.theta_arc, self.p, self.p_dot,
                                              self.vec_elbow, self.vec_shoulder, self.s_1a, self.s_1b,
@@ -510,7 +559,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.start_computation_in_thread_workspace_sphere()
                 self.trajectory_logger.delete_buffer()
 
-        self.visualizer.resampling()
+        self.visualizer.resampling(t=t)
 
     def on_theta_change(self):
         text = self.theta_input.text()
@@ -655,14 +704,22 @@ class MainWindow(QtWidgets.QMainWindow):
         self.elbow_btn.setToolTip("New elbow position needs confirmation")
 
     def toggle_style_start(self):
-        # Disable button while computation is running
-        self.start_btn.setText("Start Animation")
+        # Disable buttons while computations running
+        self.start_btn.setText("Play Trajectory")
         self.start_btn.setStyleSheet("""
                 QPushButton {
                     font-weight: bold;
                 }
                 """)
         self.start_btn.setEnabled(True)
+
+        self.simulate_dynamics_btn.setText("Simulation")
+        self.simulate_dynamics_btn.setStyleSheet("""
+                        QPushButton {
+                            font-weight: bold;
+                        }
+                        """)
+        self.simulate_dynamics_btn.setEnabled(True)
 
     def toggle_workspace_visibility(self):
         visible = self.toggle_button_workspace.isChecked()
@@ -933,7 +990,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.worker_thread_velo.deleteLater()
             del self.worker_thread_velo
 
-        self.compute_kinematics()
+        self.compute_kinematics(self.x_0, self.y_0, self.z_0, True)
 
         self.worker_thread_velo = WorkerThreadVelo(
             self.theta, self.phi, self.theta_arc, self.phi_arc,
@@ -968,6 +1025,62 @@ class MainWindow(QtWidgets.QMainWindow):
     def on_plot_window_closed(self):
         self.plot_window = None
 
+    def run_dynamics_simulation(self):
+        if not hasattr(self, 'simulation_logger'):
+            QtWidgets.QMessageBox.warning(self, "No Trajectory", "No simulated trajectory logger object")
+            return
+
+        self.simulate_dynamics_btn.setEnabled(False)
+        self.simulate_dynamics_btn.setText("Computing...")
+
+        # Get the current trajectory data
+        p_kine = self.p
+        p_dot_kine, p_dotdot_kine, t_kine = Cart_velocity_ramp(self.l_arm_proth, self.theta, self.phi, self.theta_arc,
+                                                self.phi_arc, self.omega_max, self.accel, self.p)
+
+        trajectory_data = [
+            {"t": float(t_kine[i]), "x": [float(x), float(y), float(z)]}
+            for i, (x, y, z) in enumerate(p_kine[:len(t_kine)])
+        ]
+
+        hash = self.simulation_logger.compute_trajectory_hash(trajectory_data)
+
+        # Check for simulation cache match
+        if not self.simulation_logger.needs_recompute(hash):
+            print("✅ Using cached SIL simulation results")
+            self.simulation_logger.load_cached_simulation()
+            t_dyn, p_dyn, p_dot_dyn, theta_dyn, theta_dot_dyn, tau_dyn = parse_simulation_result(self.simulation_logger.sim_results)
+            self.p_dot = p_dot_dyn.T
+            self.compute_kinematics(p_dyn[:, 0], p_dyn[:, 1], p_dyn[:, 2], False)
+            self.compute_and_update_visualizer(t=t_dyn)
+            self.start_PyVista_anim()
+            self.simulate_dynamics_btn.setEnabled(True)
+            self.simulate_dynamics_btn.setText("Simulate Dynamics")
+            return
+
+        print("🌀 Running new SIL simulation (no cache match)...")
+
+        # Define thread and callbacks
+        self.worker_thread_dynamics = DynamicsThread(trajectory_data)
+
+        def on_result(results):
+            # Save new simulation result to buffer
+            sim_hash = self.simulation_logger.compute_trajectory_hash(trajectory_data)
+            self.simulation_logger.save_simulation_results(results, sim_hash)
+            t_dyn, p_dyn, p_dot_dyn, theta_dyn, theta_dot_dyn, tau_dyn = parse_simulation_result(self.simulation_logger.sim_results)
+            self.p_dot = p_dot_dyn.T
+            self.compute_kinematics(p_dyn[:, 0], p_dyn[:, 1], p_dyn[:, 2], False)
+            self.compute_and_update_visualizer(t=t_dyn)
+            self.start_PyVista_anim()
+
+        self.worker_thread_dynamics.result_signal.connect(on_result)
+        self.worker_thread_dynamics.error_signal.connect(self.handle_thread_error)
+        self.worker_thread_dynamics.finished_signal.connect(
+            lambda: self.simulate_dynamics_btn.setEnabled(True))
+        self.worker_thread_dynamics.finished_signal.connect(
+            lambda: self.simulate_dynamics_btn.setText("Simulate Dynamics"))
+        self.worker_thread_dynamics.start()
+
     def closeEvent(self, event):
         if hasattr(self, 'worker_thread_plot') and self.worker_thread_plot.isRunning():
             self.worker_thread_plot.quit()
@@ -985,6 +1098,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.plot_window.close()  # Close the plot window explicitly
         if hasattr(self, 'timer'):
             self.timer.deleteLater()
+        if hasattr(self, 'sil_server'):
+            self.sil_server.stop()
         event.accept()  # Accept the close event
 
 

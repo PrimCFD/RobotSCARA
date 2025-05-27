@@ -1,18 +1,28 @@
 @echo off
 setlocal enabledelayedexpansion
 
+:: ----------------------------------------
+:: SCARA Robot Control Launcher
 :: Compatible with Windows and WSL
+:: ----------------------------------------
 
 echo.
 echo Initializing SCARA Robot Control...
 echo.
 
-:: Configuration
+:: ----------------------------------------
+:: CONFIGURATION
+:: ----------------------------------------
 set DEBUG=0
 set VENV_DIRS=venv scara_venv .venv
 set DEFAULT_VENV=venv
+set BACKEND_DIR=backend
+set BUILD_DIR=%BACKEND_DIR%\build
+set EXECUTABLE=..\bin\backend.exe
 
-:: Check existing virtual environments
+:: ----------------------------------------
+:: STEP 1: Check existing virtual environments
+:: ----------------------------------------
 echo Checking for existing virtual environments...
 for %%D in (%VENV_DIRS%) do (
     if exist "%%D\Scripts\python.exe" (
@@ -74,7 +84,9 @@ echo.
 echo Using Python at: %FOUND%
 echo.
 
-:: Install requirements
+:: ----------------------------------------
+:: STEP 2: Install dependencies
+:: ----------------------------------------
 echo Checking dependencies...
 "%FOUND%" -m pip show pyqt5 >nul 2>&1
 if %errorlevel% neq 0 (
@@ -86,14 +98,40 @@ if exist requirements.txt (
     "%FOUND%" -m pip install -r requirements.txt
 )
 
-:: Launch application
+:: ----------------------------------------
+:: STEP 3: Build backend executable (C++)
+:: ----------------------------------------
+echo.
+echo Building backend executable...
+
+:: Ensure build directory exists
+if not exist "%BUILD_DIR%" (
+    mkdir "%BUILD_DIR%"
+)
+
+pushd "%BUILD_DIR%"
+cmake .. -DCMAKE_BUILD_TYPE=Release >nul
+cmake --build . --config Release >nul
+popd
+
+:: Confirm executable exists
+if not exist "%BACKEND_DIR%\%EXECUTABLE%" (
+    echo.
+    echo [ERROR] Backend build failed: %EXECUTABLE% not found.
+    pause
+    exit /b 1
+)
+
+:: ----------------------------------------
+:: STEP 4: Launch Python application
+:: ----------------------------------------
 echo.
 echo Starting SCARA Robot Control...
 echo.
+
 cd /D "%~dp0"
 "%FOUND%" launcher.py
 
-:: Error handling
 if %errorlevel% neq 0 (
     echo.
     echo Application exited with error %errorlevel%

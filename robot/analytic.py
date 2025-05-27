@@ -92,13 +92,13 @@ class Plot_velo_accel(QWidget):
     def J_dot(self, xp, yp, zp, theta_1, theta_2, theta_3, theta_1p, theta_2p, theta_3p, l_11, l_21, l_31, N):
         if N > 1:
 
-            P = np.array([[xp + l_11 * theta_1p * np.cos(theta_1), yp - l_11 * theta_1p * np.cos(theta_1), zp],
-                          [xp + l_21 * theta_2p * np.cos(theta_2), yp - l_21 * theta_2p * np.cos(theta_2), zp],
+            P = np.array([[xp + l_11 * theta_1p * np.cos(theta_1), yp - l_11 * theta_1p * np.sin(theta_1), zp],
+                          [xp + l_21 * theta_2p * np.cos(theta_2), yp - l_21 * theta_2p * np.sin(theta_2), zp],
                           [xp + l_31 * theta_3p * np.cos(theta_3), yp, zp - l_31 * theta_3p * np.sin(theta_3)]])
             return np.einsum('kji', P)
         else:
-            return np.array([[xp + l_11 * theta_1p * np.cos(theta_1), yp - l_11 * theta_1p * np.cos(theta_1), zp],
-                             [xp + l_21 * theta_2p * np.cos(theta_2), yp - l_21 * theta_2p * np.cos(theta_2), zp],
+            return np.array([[xp + l_11 * theta_1p * np.cos(theta_1), yp - l_11 * theta_1p * np.sin(theta_1), zp],
+                             [xp + l_21 * theta_2p * np.cos(theta_2), yp - l_21 * theta_2p * np.sin(theta_2), zp],
                              [xp + l_31 * theta_3p * np.cos(theta_3), yp, zp - l_31 * theta_3p * np.sin(theta_3)]])
 
     def Compute_motor_speed(self, p, p_dot, theta_1, theta_2, theta_3, d, v_1, v_2, v_3, h_1, h_2, h_3, l_11, l_21,
@@ -169,16 +169,16 @@ class Plot_velo_accel(QWidget):
             p_dotdot)
         J_2 = batch_matvecmul(
             self.J_dot(xp, yp, zp, theta_1, theta_2, theta_3, theta_1p, theta_2p, theta_3p, l_11, l_21, l_31, N_points),
-            p_dotdot)
+            p_dot)
         J_3 = batch_matvecmul(
             self.K_dot(x, y, z, xp, yp, zp, theta_1, theta_2, theta_3, theta_1p, theta_2p, theta_3p, d, v_3, h_3,
                        N_points),
             theta_p)
-        J_sum = J_1 + J_2 + J_3
+        J_sum = J_1 + J_2 - J_3
 
         K_temp = self.K(x, y, z, theta_1, theta_2, theta_3, d, v_3, h_3, N_points)
         eps = 1e-8
-        diag_vals = np.einsum('nii->ni', K_temp)  # shape (N, 3) – extrait les diagonales
+        diag_vals = np.einsum('nii->ni', K_temp)  # shape (N, 3) – extracts diagonals
         safe_vals = np.where(np.abs(diag_vals) < eps, eps, diag_vals)
         inv_diag = 1 / safe_vals
         K_inv_batch = np.zeros_like(K_temp)
@@ -252,7 +252,7 @@ class Plot_velo_accel(QWidget):
 
         return tau_1, tau_2, tau_3
 
-    def compute_inv_dynamics(self, h_1, h_2, h_3, l_11, l_21, l_31, m_1, m_2, m_3, m_d, l_arm_proth):
+    def compute_inv_dynamics(self, h_1, h_2, h_3, l_11, l_21, l_31, m_11, m_21, m_31, m_12, m_22, m_32, m_d, l_arm_proth):
         p_0, phi_arc, theta_arc, p, vec_elbow, vec_shoulder, \
         theta_1bis, theta_1, theta_2bis, theta_2, theta_3bis, theta_3, d, v_1, v_2, v_3, m_1_point, m_2_point, m_3_point, z_vec, N_per_decideg = Compute_kine_traj(
             self.x_0, self.y_0, self.z_0, self.theta, self.phi, False, True)
@@ -299,7 +299,7 @@ class Plot_velo_accel(QWidget):
 
         tau_1, tau_2, tau_3 = self.compute_torque(x, y, z, theta_1, theta_2, theta_3, d, v_1, v_2, v_3, h_1, h_2, h_3,
                                                   l_11, l_21, l_31,
-                                                  N_points, m_1, m_2, m_3, m_1, m_2, m_3, m_d, x_p, y_p, z_p, theta_1p,
+                                                  N_points, m_11, m_21, m_31, m_12, m_22, m_32, m_d, x_p, y_p, z_p, theta_1p,
                                                   theta_2p, theta_3p,
                                                   x_pp, y_pp, z_pp, theta_1pp, theta_2pp, theta_3pp,
                                                   l_arm_proth)

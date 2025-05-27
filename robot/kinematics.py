@@ -97,18 +97,27 @@ def arc(x_0, y_0, z_0, theta, phi, kine):
     return p_0, x_arc, y_arc, z_arc, N_points, theta_arc, phi_arc
 
 
-def Compute_kine_traj(x_0, y_0, z_0, theta, phi, cart, kine):
+def Compute_kine_traj(x, y, z, theta, phi, cart, kine, arc_traj):
     # Window dimensions
 
     ### Biomechanics ###
 
-    p_0, x_arc, y_arc, z_arc, N_points, theta_arc, phi_arc = arc(x_0, y_0, z_0, theta, phi, kine)
+    set_config("temp")
+    d, v_1, v_2, v_3, h_1, h_2, h_3, l_11, l_21, l_31, l_12, l_22, l_32, vec_elbow, vec_shoulder, l_arm_proth, l_humerus, m_1, m_2, m_3, m_d = constants()
+
+    if arc_traj:
+
+        p_0, x_arc, y_arc, z_arc, N_points, theta_arc, phi_arc = arc(x, y, z, theta, phi, kine)
+
+    else:
+
+        x_arc, y_arc, z_arc = x, y, z
+        N_points = len(x_arc.tolist())
+        p_0 = np.array([x_arc[0], y_arc[0], z_arc[0]])
+        r, theta_arc, phi_arc = Cartesian_to_spherical(x_arc, y_arc, z_arc, vec_elbow, N_points)
 
     p_temp = np.array([x_arc, y_arc, z_arc])  # Position vector
     p = p_temp.T  # Dimension adjustment
-
-    set_config("temp")
-    d, v_1, v_2, v_3, h_1, h_2, h_3, l_11, l_21, l_31, l_12, l_22, l_32, vec_elbow, vec_shoulder, l_arm_proth, l_humerus, m_1, m_2, m_3, m_d = constants()
 
     y_vec = np.array([0, 1, 0])  # Y vector
     z_vec = np.array([0, 0, 1])  # Z vector
@@ -121,6 +130,7 @@ def Compute_kine_traj(x_0, y_0, z_0, theta, phi, cart, kine):
     s_1a, s_1b, s_2a, s_2b, s_3a, s_3b \
         = inv_kine(x_arc, y_arc, z_arc, m_1, m_2, m_3, y_vec, z_vec,
                    l_11, l_12, l_21, l_22, l_31, l_32, d, v_1, v_2, v_3, h_1, h_2, h_3, N_points, cart)
+
 
     return p_0, phi_arc, theta_arc, p, vec_elbow, vec_shoulder, \
            s_1a, s_1b, s_2a, s_2b, s_3a, s_3b, d, v_1, v_2, v_3, m_1, m_2, m_3, z_vec, N_points
