@@ -6,7 +6,6 @@ scara_venv
 .idea
 .benchmarks
 .vscode
-bin/backend.pdb
-bin/backend.exe
+bin
 backend/build
 
