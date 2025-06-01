@@ -9,7 +9,7 @@ import csv, json
 from pathlib import Path
 import pandas as pd
 import numpy as np
-from robot.misc import constants
+from robot.misc import constants, load_config
 import hashlib
 
 
@@ -108,8 +108,14 @@ class SimulationLogger:
 
         self.load_cached_simulation()
 
+    # In measurement.py > SimulationLogger class
     def compute_trajectory_hash(self, trajectory_data):
-        serialized = json.dumps(trajectory_data, sort_keys=True)
+        # Include robot configuration in the hash
+        config = load_config()  # Get current robot parameters
+        serialized = json.dumps({
+            "trajectory": trajectory_data,
+            "config": [config]  # Add config parameters
+        }, sort_keys=True)
         return hashlib.sha256(serialized.encode()).hexdigest()
 
     def save_simulation_results(self, results, hash_value):

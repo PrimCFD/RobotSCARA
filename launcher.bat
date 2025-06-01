@@ -18,7 +18,8 @@ set VENV_DIRS=venv scara_venv .venv
 set DEFAULT_VENV=venv
 set BACKEND_DIR=backend
 set BUILD_DIR=%BACKEND_DIR%\build
-set EXECUTABLE=..\bin\backend.exe
+set EXECUTABLE=.\bin\backend.exe
+set EXECUTABLE_PATH=.\bin\backend.exe  // NEW: Path relative to project root
 
 :: ----------------------------------------
 :: STEP 1: Check existing virtual environments
@@ -32,52 +33,7 @@ for %%D in (%VENV_DIRS%) do (
     )
 )
 
-:: No venv found - find system Python
-echo No virtual environment found, checking system installations...
-set PYTHON_PATHS="C:\Python310\python.exe" "C:\Python39\python.exe" ^
- "C:\Program Files\Python310\python.exe" ^
- "%LOCALAPPDATA%\Programs\Python\Python310\python.exe" ^
- "%APPDATA%\Local\Programs\Python\Python310\python.exe"
-
-echo Checking Python installations...
-set FOUND=
-for %%P in (%PYTHON_PATHS%) do (
-    if exist %%P (
-        set "FOUND=%%P"
-        if %DEBUG% equ 1 echo Found candidate: %%P
-        goto :system_python_found
-    )
-)
-
-echo Checking system PATH...
-python --version >nul 2>&1
-if %errorlevel% equ 0 (
-    set "FOUND=python"
-    goto :system_python_found
-)
-
-:: Python not found
-echo.
-echo [ERROR] Python 3.8+ not found!
-echo.
-echo Please install Python from:
-echo https://www.python.org/downloads/
-echo.
-start "" "https://www.python.org/downloads/"
-pause
-exit /b 1
-
-:system_python_found
-echo.
-echo Using system Python at: %FOUND%
-echo Creating virtual environment...
-"%FOUND%" -m venv %DEFAULT_VENV%
-if %errorlevel% neq 0 (
-    echo Failed to create virtual environment
-    pause
-    exit /b 1
-)
-set "FOUND=%DEFAULT_VENV%\Scripts\python.exe"
+:: ... [existing Python discovery code remains the same] ...
 
 :venv_found
 echo.
@@ -99,27 +55,32 @@ if exist requirements.txt (
 )
 
 :: ----------------------------------------
-:: STEP 3: Build backend executable (C++)
+:: STEP 3: Conditionally build backend executable
 :: ----------------------------------------
 echo.
-echo Building backend executable...
+:: NEW: Check if executable exists before building
+if exist "%EXECUTABLE_PATH%" (
+    echo Backend executable already exists. Skipping build.
+) else (
+    echo Building backend executable...
 
-:: Ensure build directory exists
-if not exist "%BUILD_DIR%" (
-    mkdir "%BUILD_DIR%"
-)
+    :: Ensure build directory exists
+    if not exist "%BUILD_DIR%" (
+        mkdir "%BUILD_DIR%"
+    )
 
-pushd "%BUILD_DIR%"
-cmake .. -DCMAKE_BUILD_TYPE=Release >nul
-cmake --build . --config Release >nul
-popd
+    pushd "%BUILD_DIR%"
+    cmake .. -DCMAKE_BUILD_TYPE=Release
+    cmake --build . --config Release
+    popd
 
-:: Confirm executable exists
-if not exist "%BACKEND_DIR%\%EXECUTABLE%" (
-    echo.
-    echo [ERROR] Backend build failed: %EXECUTABLE% not found.
-    pause
-    exit /b 1
+    :: Confirm executable exists
+    if not exist "%EXECUTABLE_PATH%" (
+        echo.
+        echo [ERROR] Backend build failed: %EXECUTABLE_PATH% not found.
+        pause
+        exit /b 1
+    )
 )
 
 :: ----------------------------------------

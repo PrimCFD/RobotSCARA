@@ -1,0 +1,30 @@
+^C:\USERS\ANTHO\DESKTOP\COPR02\BACKEND\BUILD\CMAKEFILES\13F6DC5E4DC62725E2D2E98ADD5BC130\HARDCODEDPARAMS.HPP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E make_directory C:/Users/antho/Desktop/COPR02/backend/include
+if %errorlevel% neq 0 goto :cmEnd
+C:\Users\antho\Desktop\COPR02\backend\..\venv\Scripts\python.exe C:/Users/antho/Desktop/COPR02/backend/../utils/generate_params.py C:/Users/antho/Desktop/COPR02/backend/../configs/temp.json C:/Users/antho/Desktop/COPR02/backend/include
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\ANTHO\DESKTOP\COPR02\BACKEND\BUILD\CMAKEFILES\E28B697D4B123B2D4D75E526DC0695A9\GENERATE_PARAMS.RULE
+setlocal
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\ANTHO\DESKTOP\COPR02\BACKEND\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/antho/Desktop/COPR02/backend -BC:/Users/antho/Desktop/COPR02/backend/build --check-stamp-file C:/Users/antho/Desktop/COPR02/backend/build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

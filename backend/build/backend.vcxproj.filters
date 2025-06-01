@@ -10,9 +10,6 @@
     <ClCompile Include="C:\Users\antho\Desktop\COPR02\backend\src\SIL.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\antho\Desktop\COPR02\backend\src\TorqueQP.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="C:\Users\antho\Desktop\COPR02\backend\CMakeLists.txt" />

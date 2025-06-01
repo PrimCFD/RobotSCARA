@@ -9,7 +9,7 @@ ICON_PATH="$(dirname "$0")/assets/scara_icon.png"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 VENV_DIRS=("$SCRIPT_DIR/venv" "$SCRIPT_DIR/scara_venv" "$SCRIPT_DIR/.venv")
 BUILD_DIR="$SCRIPT_DIR/backend/build"
-BIN_PATH="$SCRIPT_DIR/bin/backend"
+BIN_PATH="$SCRIPT_DIR/bin/backend"  # Changed to project root path
 
 echo -e "\nInitializing ${APP_NAME}...\n"
 [ "$DEBUG" -eq 1 ] && set -x
@@ -95,9 +95,15 @@ EOF
 }
 
 # ----------------------------------------
-# Build C++ backend using CMake
+# Conditionally build C++ backend
 # ----------------------------------------
 build_backend() {
+    # NEW: Check if backend already exists
+    if [ -f "$BIN_PATH" ]; then
+        echo "Backend executable already exists. Skipping build."
+        return 0
+    fi
+
     echo "Building C++ backend..."
     mkdir -p "$BUILD_DIR"
     pushd "$BUILD_DIR" >/dev/null
@@ -131,6 +137,7 @@ fi
 
 check_wsl_gui
 
+# Always try to build (function handles conditional)
 if ! build_backend; then
     echo -e "\n[ERROR] Backend C++ build failed"
     read -p "Press enter to exit..."

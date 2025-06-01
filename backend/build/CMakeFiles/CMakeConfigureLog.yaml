@@ -24,7 +24,7 @@ events:
       The output was:
       0
       MSBuild version 17.5.1+f6fdcf537 for .NET Framework
-      La génération a démarré 26/05/2025 22:24:41.
+      La génération a démarré 01/06/2025 23:50:44.
       Included response file: C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\MSBuild\\Current\\Bin\\amd64\\MSBuild.rsp
       
       Projet "C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\4.0.0\\CompilerIdC\\CompilerIdC.vcxproj" sur le noud 1 (cibles par défaut).
@@ -52,7 +52,7 @@ events:
           0 Avertissement(s)
           0 Erreur(s)
       
-      Temps écoulé 00:00:01.53
+      Temps écoulé 00:00:01.33
       
       
       Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.exe"
@@ -78,7 +78,7 @@ events:
       The output was:
       0
       MSBuild version 17.5.1+f6fdcf537 for .NET Framework
-      La génération a démarré 26/05/2025 22:24:43.
+      La génération a démarré 01/06/2025 23:50:46.
       Included response file: C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\MSBuild\\Current\\Bin\\amd64\\MSBuild.rsp
       
       Projet "C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\4.0.0\\CompilerIdCXX\\CompilerIdCXX.vcxproj" sur le noud 1 (cibles par défaut).
@@ -106,7 +106,7 @@ events:
           0 Avertissement(s)
           0 Erreur(s)
       
-      Temps écoulé 00:00:01.34
+      Temps écoulé 00:00:00.80
       
       
       Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.exe"
@@ -125,8 +125,8 @@ events:
     checks:
       - "Detecting C compiler ABI info"
     directories:
-      source: "C:/Users/antho/Desktop/COPR02/backend/build/CMakeFiles/CMakeScratch/TryCompile-miy3te"
-      binary: "C:/Users/antho/Desktop/COPR02/backend/build/CMakeFiles/CMakeScratch/TryCompile-miy3te"
+      source: "C:/Users/antho/Desktop/COPR02/backend/build/CMakeFiles/CMakeScratch/TryCompile-ytntbt"
+      binary: "C:/Users/antho/Desktop/COPR02/backend/build/CMakeFiles/CMakeScratch/TryCompile-ytntbt"
     cmakeVariables:
       CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS /W3"
       CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
@@ -134,39 +134,39 @@ events:
       variable: "CMAKE_C_ABI_COMPILED"
       cached: true
       stdout: |
-        Change Dir: 'C:/Users/antho/Desktop/COPR02/backend/build/CMakeFiles/CMakeScratch/TryCompile-miy3te'
+        Change Dir: 'C:/Users/antho/Desktop/COPR02/backend/build/CMakeFiles/CMakeScratch/TryCompile-ytntbt'
         
-        Run Build Command(s): "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_b1134.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        Run Build Command(s): "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_2b90f.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
         MSBuild version 17.5.1+f6fdcf537 for .NET Framework
-        La génération a démarré 26/05/2025 22:24:45.
+        La génération a démarré 01/06/2025 23:50:47.
         Included response file: C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\MSBuild\\Current\\Bin\\amd64\\MSBuild.rsp
         
-        Projet "C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\CMakeScratch\\TryCompile-miy3te\\cmTC_b1134.vcxproj" sur le noud 1 (cibles par défaut).
+        Projet "C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ytntbt\\cmTC_2b90f.vcxproj" sur le noud 1 (cibles par défaut).
         PrepareForBuild:
-          Création du répertoire "cmTC_b1134.dir\\Debug\\".
-          Création du répertoire "C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\CMakeScratch\\TryCompile-miy3te\\Debug\\".
-          Création du répertoire "cmTC_b1134.dir\\Debug\\cmTC_b1134.tlog\\".
+          Création du répertoire "cmTC_2b90f.dir\\Debug\\".
+          Création du répertoire "C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ytntbt\\Debug\\".
+          Création du répertoire "cmTC_2b90f.dir\\Debug\\cmTC_2b90f.tlog\\".
         InitializeBuildStatus:
-          Création de "cmTC_b1134.dir\\Debug\\cmTC_b1134.tlog\\unsuccessfulbuild", car "AlwaysCreate" a été spécifié.
+          Création de "cmTC_2b90f.dir\\Debug\\cmTC_2b90f.tlog\\unsuccessfulbuild", car "AlwaysCreate" a été spécifié.
         ClCompile:
-          C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.35.32215\\bin\\HostX64\\x64\\CL.exe /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_b1134.dir\\Debug\\\\" /Fd"cmTC_b1134.dir\\Debug\\vc143.pdb" /external:W3 /Gd /TC /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.0\\Modules\\CMakeCCompilerABI.c"
+          C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.35.32215\\bin\\HostX64\\x64\\CL.exe /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_2b90f.dir\\Debug\\\\" /Fd"cmTC_2b90f.dir\\Debug\\vc143.pdb" /external:W3 /Gd /TC /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.0\\Modules\\CMakeCCompilerABI.c"
           Compilateur d'optimisation Microsoft (R) C/C++ version 19.35.32216.1 pour x64
           CMakeCCompilerABI.c
           Copyright (C) Microsoft Corporation. Tous droits réservés.
-          cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_b1134.dir\\Debug\\\\" /Fd"cmTC_b1134.dir\\Debug\\vc143.pdb" /external:W3 /Gd /TC /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.0\\Modules\\CMakeCCompilerABI.c"
+          cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_2b90f.dir\\Debug\\\\" /Fd"cmTC_2b90f.dir\\Debug\\vc143.pdb" /external:W3 /Gd /TC /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.0\\Modules\\CMakeCCompilerABI.c"
         Link:
-          C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.35.32215\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\CMakeScratch\\TryCompile-miy3te\\Debug\\cmTC_b1134.exe" /INCREMENTAL /ILK:"cmTC_b1134.dir\\Debug\\cmTC_b1134.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Users/antho/Desktop/COPR02/backend/build/CMakeFiles/CMakeScratch/TryCompile-miy3te/Debug/cmTC_b1134.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:/Users/antho/Desktop/COPR02/backend/build/CMakeFiles/CMakeScratch/TryCompile-miy3te/Debug/cmTC_b1134.lib" /MACHINE:X64  /machine:x64 cmTC_b1134.dir\\Debug\\CMakeCCompilerABI.obj
-          cmTC_b1134.vcxproj -> C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\CMakeScratch\\TryCompile-miy3te\\Debug\\cmTC_b1134.exe
+          C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.35.32215\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ytntbt\\Debug\\cmTC_2b90f.exe" /INCREMENTAL /ILK:"cmTC_2b90f.dir\\Debug\\cmTC_2b90f.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Users/antho/Desktop/COPR02/backend/build/CMakeFiles/CMakeScratch/TryCompile-ytntbt/Debug/cmTC_2b90f.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:/Users/antho/Desktop/COPR02/backend/build/CMakeFiles/CMakeScratch/TryCompile-ytntbt/Debug/cmTC_2b90f.lib" /MACHINE:X64  /machine:x64 cmTC_2b90f.dir\\Debug\\CMakeCCompilerABI.obj
+          cmTC_2b90f.vcxproj -> C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ytntbt\\Debug\\cmTC_2b90f.exe
         FinalizeBuildStatus:
-          Suppression du fichier "cmTC_b1134.dir\\Debug\\cmTC_b1134.tlog\\unsuccessfulbuild".
-          Mise à jour de l'horodatage "cmTC_b1134.dir\\Debug\\cmTC_b1134.tlog\\cmTC_b1134.lastbuildstate".
-        Génération du projet "C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\CMakeScratch\\TryCompile-miy3te\\cmTC_b1134.vcxproj" terminée (cibles par défaut).
+          Suppression du fichier "cmTC_2b90f.dir\\Debug\\cmTC_2b90f.tlog\\unsuccessfulbuild".
+          Mise à jour de l'horodatage "cmTC_2b90f.dir\\Debug\\cmTC_2b90f.tlog\\cmTC_2b90f.lastbuildstate".
+        Génération du projet "C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\CMakeScratch\\TryCompile-ytntbt\\cmTC_2b90f.vcxproj" terminée (cibles par défaut).
         
         La génération a réussi.
             0 Avertissement(s)
             0 Erreur(s)
         
-        Temps écoulé 00:00:00.95
+        Temps écoulé 00:00:00.92
         
       exitCode: 0
   -
@@ -206,8 +206,8 @@ events:
     checks:
       - "Detecting CXX compiler ABI info"
     directories:
-      source: "C:/Users/antho/Desktop/COPR02/backend/build/CMakeFiles/CMakeScratch/TryCompile-4sqwlb"
-      binary: "C:/Users/antho/Desktop/COPR02/backend/build/CMakeFiles/CMakeScratch/TryCompile-4sqwlb"
+      source: "C:/Users/antho/Desktop/COPR02/backend/build/CMakeFiles/CMakeScratch/TryCompile-x8a0sr"
+      binary: "C:/Users/antho/Desktop/COPR02/backend/build/CMakeFiles/CMakeScratch/TryCompile-x8a0sr"
     cmakeVariables:
       CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /W3 /GR /EHsc"
       CMAKE_CXX_SCAN_FOR_MODULES: "OFF"
@@ -216,39 +216,39 @@ events:
       variable: "CMAKE_CXX_ABI_COMPILED"
       cached: true
       stdout: |
-        Change Dir: 'C:/Users/antho/Desktop/COPR02/backend/build/CMakeFiles/CMakeScratch/TryCompile-4sqwlb'
+        Change Dir: 'C:/Users/antho/Desktop/COPR02/backend/build/CMakeFiles/CMakeScratch/TryCompile-x8a0sr'
         
-        Run Build Command(s): "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_6b207.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        Run Build Command(s): "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_42bf1.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
         MSBuild version 17.5.1+f6fdcf537 for .NET Framework
-        La génération a démarré 26/05/2025 22:24:47.
+        La génération a démarré 01/06/2025 23:50:49.
         Included response file: C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\MSBuild\\Current\\Bin\\amd64\\MSBuild.rsp
         
-        Projet "C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\CMakeScratch\\TryCompile-4sqwlb\\cmTC_6b207.vcxproj" sur le noud 1 (cibles par défaut).
+        Projet "C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\CMakeScratch\\TryCompile-x8a0sr\\cmTC_42bf1.vcxproj" sur le noud 1 (cibles par défaut).
         PrepareForBuild:
-          Création du répertoire "cmTC_6b207.dir\\Debug\\".
-          Création du répertoire "C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\CMakeScratch\\TryCompile-4sqwlb\\Debug\\".
-          Création du répertoire "cmTC_6b207.dir\\Debug\\cmTC_6b207.tlog\\".
+          Création du répertoire "cmTC_42bf1.dir\\Debug\\".
+          Création du répertoire "C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\CMakeScratch\\TryCompile-x8a0sr\\Debug\\".
+          Création du répertoire "cmTC_42bf1.dir\\Debug\\cmTC_42bf1.tlog\\".
         InitializeBuildStatus:
-          Création de "cmTC_6b207.dir\\Debug\\cmTC_6b207.tlog\\unsuccessfulbuild", car "AlwaysCreate" a été spécifié.
+          Création de "cmTC_42bf1.dir\\Debug\\cmTC_42bf1.tlog\\unsuccessfulbuild", car "AlwaysCreate" a été spécifié.
         ClCompile:
-          C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.35.32215\\bin\\HostX64\\x64\\CL.exe /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"cmTC_6b207.dir\\Debug\\\\" /Fd"cmTC_6b207.dir\\Debug\\vc143.pdb" /external:W3 /Gd /TP /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.0\\Modules\\CMakeCXXCompilerABI.cpp"
+          C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.35.32215\\bin\\HostX64\\x64\\CL.exe /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"cmTC_42bf1.dir\\Debug\\\\" /Fd"cmTC_42bf1.dir\\Debug\\vc143.pdb" /external:W3 /Gd /TP /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.0\\Modules\\CMakeCXXCompilerABI.cpp"
           Compilateur d'optimisation Microsoft (R) C/C++ version 19.35.32216.1 pour x64
           CMakeCXXCompilerABI.cpp
           Copyright (C) Microsoft Corporation. Tous droits réservés.
-          cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"cmTC_6b207.dir\\Debug\\\\" /Fd"cmTC_6b207.dir\\Debug\\vc143.pdb" /external:W3 /Gd /TP /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.0\\Modules\\CMakeCXXCompilerABI.cpp"
+          cl /c /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"cmTC_42bf1.dir\\Debug\\\\" /Fd"cmTC_42bf1.dir\\Debug\\vc143.pdb" /external:W3 /Gd /TP /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.0\\Modules\\CMakeCXXCompilerABI.cpp"
         Link:
-          C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.35.32215\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\CMakeScratch\\TryCompile-4sqwlb\\Debug\\cmTC_6b207.exe" /INCREMENTAL /ILK:"cmTC_6b207.dir\\Debug\\cmTC_6b207.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Users/antho/Desktop/COPR02/backend/build/CMakeFiles/CMakeScratch/TryCompile-4sqwlb/Debug/cmTC_6b207.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:/Users/antho/Desktop/COPR02/backend/build/CMakeFiles/CMakeScratch/TryCompile-4sqwlb/Debug/cmTC_6b207.lib" /MACHINE:X64  /machine:x64 cmTC_6b207.dir\\Debug\\CMakeCXXCompilerABI.obj
-          cmTC_6b207.vcxproj -> C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\CMakeScratch\\TryCompile-4sqwlb\\Debug\\cmTC_6b207.exe
+          C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.35.32215\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\CMakeScratch\\TryCompile-x8a0sr\\Debug\\cmTC_42bf1.exe" /INCREMENTAL /ILK:"cmTC_42bf1.dir\\Debug\\cmTC_42bf1.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Users/antho/Desktop/COPR02/backend/build/CMakeFiles/CMakeScratch/TryCompile-x8a0sr/Debug/cmTC_42bf1.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:/Users/antho/Desktop/COPR02/backend/build/CMakeFiles/CMakeScratch/TryCompile-x8a0sr/Debug/cmTC_42bf1.lib" /MACHINE:X64  /machine:x64 cmTC_42bf1.dir\\Debug\\CMakeCXXCompilerABI.obj
+          cmTC_42bf1.vcxproj -> C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\CMakeScratch\\TryCompile-x8a0sr\\Debug\\cmTC_42bf1.exe
         FinalizeBuildStatus:
-          Suppression du fichier "cmTC_6b207.dir\\Debug\\cmTC_6b207.tlog\\unsuccessfulbuild".
-          Mise à jour de l'horodatage "cmTC_6b207.dir\\Debug\\cmTC_6b207.tlog\\cmTC_6b207.lastbuildstate".
-        Génération du projet "C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\CMakeScratch\\TryCompile-4sqwlb\\cmTC_6b207.vcxproj" terminée (cibles par défaut).
+          Suppression du fichier "cmTC_42bf1.dir\\Debug\\cmTC_42bf1.tlog\\unsuccessfulbuild".
+          Mise à jour de l'horodatage "cmTC_42bf1.dir\\Debug\\cmTC_42bf1.tlog\\cmTC_42bf1.lastbuildstate".
+        Génération du projet "C:\\Users\\antho\\Desktop\\COPR02\\backend\\build\\CMakeFiles\\CMakeScratch\\TryCompile-x8a0sr\\cmTC_42bf1.vcxproj" terminée (cibles par défaut).
         
         La génération a réussi.
             0 Avertissement(s)
             0 Erreur(s)
         
-        Temps écoulé 00:00:01.39
+        Temps écoulé 00:00:00.79
         
       exitCode: 0
   -

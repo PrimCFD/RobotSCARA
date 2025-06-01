@@ -1,43 +1,61 @@
 import socket
-import json
+import struct
 from typing import List, Dict
 
 
 def request_sil_simulation(trajectory: List[Dict]) -> List[Dict]:
     """
-    Sends a full trajectory to the SIL server and receives back the simulated results.
+    Sends trajectory via binary protocol and receives simulated results.
 
     Parameters:
-        trajectory: list of {"t": float, "x": [x, y, z]} waypoints
+        trajectory: list of {"t": float, "x": [x,y,z], "x_dot": [vx,vy,vz], "x_ddot": [ax,ay,az]}
 
     Returns:
-        list of {"t": float, "x": [x, y, z], "x_dot": [...], "theta": [...], "theta_dot": [...],"theta_ddot": [...], "tau": [...]} frames
+        list of frames with keys: t, x, x_dot, theta, theta_dot, tau
     """
     host = 'localhost'
     port = 5555
 
     with socket.create_connection((host, port)) as sock:
-        # Prepare request message
-        message = json.dumps({"trajectory": trajectory}) + "\n"
-        sock.sendall(message.encode("utf-8"))
+        # Build binary message
+        n = len(trajectory)
+        message = struct.pack('<i', n)
+        for wp in trajectory:
+            message += struct.pack('<10d',
+                                   wp['t'],
+                                   *wp['x'],
+                                   *wp['x_dot'],
+                                   *wp['x_ddot']
+                                   )
+        sock.sendall(message)
 
-        # Read entire response until newline
-        response = b""
-        while True:
-            chunk = sock.recv(4096)
+        # Read response header (number of frames)
+        header = sock.recv(4)
+        if len(header) != 4:
+            raise ConnectionError("Incomplete header")
+        m = struct.unpack('<i', header)[0]
+
+        # Read all frame data
+        frame_data = b''
+        remaining = m * 128  # 16 doubles * 8 bytes
+        while remaining > 0:
+            chunk = sock.recv(min(4096, remaining))
             if not chunk:
-                raise ConnectionError("Disconnected before receiving complete response.")
-            response += chunk
-            if b"\n" in response:
-                response, _, _ = response.partition(b"\n")
-                break
+                raise ConnectionError("Incomplete frame data")
+            frame_data += chunk
+            remaining -= len(chunk)
 
-        # Decode JSON
-        try:
-            results = json.loads(response.decode())
-            assert isinstance(results, list), "Server response must be a list"
-            for frame in results:
-                assert all(key in frame for key in ("t", "x", "x_dot", "theta", "theta_dot", "tau")), "Missing keys in frame"
-            return results
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON received: {e}")
+        # Parse frames
+        frames = []
+        for i in range(m):
+            start = i * 128
+            values = struct.unpack_from('<16d', frame_data, start)
+            frames.append({
+                't': values[0],
+                'x': list(values[1:4]),
+                'x_dot': list(values[4:7]),
+                'theta': list(values[7:10]),
+                'theta_dot': list(values[10:13]),
+                'tau': list(values[13:16])
+            })
+        return frames

@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\antho\Desktop\COPR02\backend\build\CMakeFiles\13f6dc5e4dc62725e2d2e98add5bc130\HardcodedParams.hpp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\antho\Desktop\COPR02\backend\build\CMakeFiles\e28b697d4b123b2d4d75e526dc0695a9\generate_params.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\antho\Desktop\COPR02\backend\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="C:\Users\antho\Desktop\COPR02\backend\build\CMakeFiles\generate_params" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{7ACE35CA-1806-3AF8-BEA1-D6D821A20886}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

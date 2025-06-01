@@ -522,12 +522,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.h_layout.addWidget(self.visualizer_container, 1)
 
     def compute_kinematics(self, x, y, z, arc_traj):
-        self.p_0, self.phi_arc, self.theta_arc, self.p, self.vec_elbow, self.vec_shoulder, self.s_1a, \
-        self.s_1b, self.s_2a, self.s_2b, self.s_3a, self.s_3b, self.d, self.v_1, self.v_2, self.v_3, self.m_1_point, \
-        self.m_2_point, self.m_3_point, self.z_vec, self.N_points = Compute_kine_traj(x, y, z,
-                                                                                      self.theta * np.pi / 180,
-                                                                                      self.phi * np.pi / 180, True,
-                                                                                      True, arc_traj)
+        p_0, phi_arc, theta_arc, p, vec_elbow, vec_shoulder, s_1a, \
+        s_1b, s_2a, s_2b, s_3a, s_3b, d, v_1, v_2, v_3, m_1_point, \
+        m_2_point, m_3_point, z_vec, N_points = \
+            Compute_kine_traj(x, y, z, self.theta * np.pi / 180, self.phi * np.pi / 180, True, True, arc_traj)
+
+        return p_0, phi_arc, theta_arc, p, vec_elbow, vec_shoulder, s_1a, \
+        s_1b, s_2a, s_2b, s_3a, s_3b, d, v_1, v_2, v_3, m_1_point, \
+        m_2_point, m_3_point, z_vec, N_points
 
     def compute_and_update_visualizer(self, t=None):
         if not self.PyVistaCreated:
@@ -713,7 +715,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 """)
         self.start_btn.setEnabled(True)
 
-        self.simulate_dynamics_btn.setText("Simulation")
+        self.simulate_dynamics_btn.setText("Simulate Dynamics")
         self.simulate_dynamics_btn.setStyleSheet("""
                         QPushButton {
                             font-weight: bold;
@@ -990,7 +992,10 @@ class MainWindow(QtWidgets.QMainWindow):
             self.worker_thread_velo.deleteLater()
             del self.worker_thread_velo
 
-        self.compute_kinematics(self.x_0, self.y_0, self.z_0, True)
+        self.p_0, self.phi_arc, self.theta_arc, self.p, self.vec_elbow, self.vec_shoulder, self.s_1a, \
+        self.s_1b, self.s_2a, self.s_2b, self.s_3a, self.s_3b, self.d, self.v_1, self.v_2, self.v_3, self.m_1_point, \
+        self.m_2_point, self.m_3_point, self.z_vec, self.N_points \
+         = self.compute_kinematics(self.x_0, self.y_0, self.z_0, True)
 
         self.worker_thread_velo = WorkerThreadVelo(
             self.theta, self.phi, self.theta_arc, self.phi_arc,
@@ -1039,8 +1044,15 @@ class MainWindow(QtWidgets.QMainWindow):
                                                 self.phi_arc, self.omega_max, self.accel, self.p)
 
         trajectory_data = [
-            {"t": float(t_kine[i]), "x": [float(x), float(y), float(z)]}
-            for i, (x, y, z) in enumerate(p_kine[:len(t_kine)])
+            {
+                "t": float(t_kine[i]),
+                "x": [float(x), float(y), float(z)],
+                "x_dot": [float(vx), float(vy), float(vz)],
+                "x_ddot": [float(ax), float(ay), float(az)]
+            }
+            for i, ((x, y, z), (vx, vy, vz), (ax, ay, az)) in enumerate(
+                zip(p_kine, p_dot_kine.T, p_dotdot_kine.T)
+            )
         ]
 
         hash = self.simulation_logger.compute_trajectory_hash(trajectory_data)
@@ -1050,9 +1062,21 @@ class MainWindow(QtWidgets.QMainWindow):
             print("✅ Using cached SIL simulation results")
             self.simulation_logger.load_cached_simulation()
             t_dyn, p_dyn, p_dot_dyn, theta_dyn, theta_dot_dyn, tau_dyn = parse_simulation_result(self.simulation_logger.sim_results)
-            self.p_dot = p_dot_dyn.T
-            self.compute_kinematics(p_dyn[:, 0], p_dyn[:, 1], p_dyn[:, 2], False)
-            self.compute_and_update_visualizer(t=t_dyn)
+            p_0, phi_arc, theta_arc, p, vec_elbow, vec_shoulder, s_1a, \
+            s_1b, s_2a, s_2b, s_3a, s_3b, d, v_1, v_2, v_3, m_1_point, \
+            m_2_point, m_3_point, z_vec, N_points = \
+                self.compute_kinematics(p_dyn[:, 0], p_dyn[:, 1], p_dyn[:, 2], False)
+
+            # Update visualizer with simulated data without altering self.p
+            self.visualizer.update_scene(
+                p_0, phi_arc, theta_arc, p_dyn,  # Use simulated trajectory
+                p_dot_dyn.T, vec_elbow, vec_shoulder,
+                s_1a, s_1b, s_2a, s_2b, s_3a, s_3b, d,
+                v_1, v_2, v_3, m_1_point, m_2_point, m_3_point,
+                z_vec, self.resolution, self.fps
+            )
+
+            self.visualizer.resampling(t=t_dyn)
             self.start_PyVista_anim()
             self.simulate_dynamics_btn.setEnabled(True)
             self.simulate_dynamics_btn.setText("Simulate Dynamics")
@@ -1068,10 +1092,24 @@ class MainWindow(QtWidgets.QMainWindow):
             sim_hash = self.simulation_logger.compute_trajectory_hash(trajectory_data)
             self.simulation_logger.save_simulation_results(results, sim_hash)
             t_dyn, p_dyn, p_dot_dyn, theta_dyn, theta_dot_dyn, tau_dyn = parse_simulation_result(self.simulation_logger.sim_results)
-            self.p_dot = p_dot_dyn.T
-            self.compute_kinematics(p_dyn[:, 0], p_dyn[:, 1], p_dyn[:, 2], False)
-            self.compute_and_update_visualizer(t=t_dyn)
+            p_0, phi_arc, theta_arc, p, vec_elbow, vec_shoulder, s_1a, \
+            s_1b, s_2a, s_2b, s_3a, s_3b, d, v_1, v_2, v_3, m_1_point, \
+            m_2_point, m_3_point, z_vec, N_points = \
+                self.compute_kinematics(p_dyn[:, 0], p_dyn[:, 1], p_dyn[:, 2], False)
+
+            # Update visualizer with simulated data without altering self.p
+            self.visualizer.update_scene(
+                p_0, phi_arc, theta_arc, p_dyn,  # Use simulated trajectory
+                p_dot_dyn.T, vec_elbow, vec_shoulder,
+                s_1a, s_1b, s_2a, s_2b, s_3a, s_3b, d,
+                v_1, v_2, v_3, m_1_point, m_2_point, m_3_point,
+                z_vec, self.resolution, self.fps
+            )
+
+            self.visualizer.resampling(t=t_dyn)
             self.start_PyVista_anim()
+            self.simulate_dynamics_btn.setEnabled(True)
+            return
 
         self.worker_thread_dynamics.result_signal.connect(on_result)
         self.worker_thread_dynamics.error_signal.connect(self.handle_thread_error)

@@ -181,66 +181,76 @@ def Proj_velocity_spherical(r, theta, phi, angle_p):
 
 
 def Spherical_to_cartesian_velocity(r, theta, phi, r_p, theta_p, phi_p):
-    # Transforms spherical coordinates in cartesian coordinates
+    """Convert spherical velocity to Cartesian velocity"""
+    # Ensure inputs are arrays for vectorization
+    r = np.asarray(r)
+    theta = np.asarray(theta)
+    phi = np.asarray(phi)
+    r_p = np.asarray(r_p)
+    theta_p = np.asarray(theta_p)
+    phi_p = np.asarray(phi_p)
 
-    # Local base for readability
+    sin_theta = np.sin(theta)
+    cos_theta = np.cos(theta)
+    sin_phi = np.sin(phi)
+    cos_phi = np.cos(phi)
 
-    e_rx = np.sin(theta) * np.cos(phi)
-    e_ry = np.sin(theta) * np.sin(phi)
-    e_rz = np.cos(theta)
-
-    e_thetax = np.cos(theta) * np.cos(phi)
-    e_thetay = np.cos(theta) * np.sin(phi)
-    e_thetaz = - np.sin(theta)
-
-    e_phix = - np.sin(phi)
-    e_phiy = np.cos(phi)
-
-    # Radial
+    # Precompute components
     radial = r_p
-    # Meridional
     meridional = r * theta_p
-    # Azimutal
-    azimutal = r * phi_p * np.sin(theta)
+    azimutal = r * phi_p * sin_theta
 
-    x_p = radial * e_rx + meridional * e_thetax + azimutal * e_phix  # m.s-1
-    y_p = radial * e_ry + meridional * e_thetay + azimutal * e_phiy  # m.s-1
-    z_p = radial * e_rz + meridional * e_thetaz  # m.s-1
+    # Cartesian velocity components
+    x_p = (radial * sin_theta * cos_phi +
+           meridional * cos_theta * cos_phi -
+           azimutal * sin_phi)
+
+    y_p = (radial * sin_theta * sin_phi +
+           meridional * cos_theta * sin_phi +
+           azimutal * cos_phi)
+
+    z_p = radial * cos_theta - meridional * sin_theta
 
     return x_p, y_p, z_p
 
 
-def Spherical_to_cartesian_accel(r, theta, phi, r_p, theta_p, phi_p, r_pp):
-    # Transforms spherical coordinates in cartesian coordinates
+def Spherical_to_cartesian_accel(r, theta, phi, r_p, theta_p, phi_p, r_pp, theta_pp, phi_pp):
+    """Convert spherical acceleration to Cartesian acceleration"""
+    # Ensure inputs are arrays for vectorization
+    r = np.asarray(r)
+    theta = np.asarray(theta)
+    phi = np.asarray(phi)
+    r_p = np.asarray(r_p)
+    theta_p = np.asarray(theta_p)
+    phi_p = np.asarray(phi_p)
+    r_pp = np.asarray(r_pp)
+    theta_pp = np.asarray(theta_pp)
+    phi_pp = np.asarray(phi_pp)
 
-    # Local base for readability
+    sin_theta = np.sin(theta)
+    cos_theta = np.cos(theta)
+    sin_phi = np.sin(phi)
+    cos_phi = np.cos(phi)
+    sin2_theta = sin_theta ** 2
 
-    e_rx = np.sin(theta) * np.cos(phi)
-    e_ry = np.sin(theta) * np.sin(phi)
-    e_rz = np.cos(theta)
+    # Precompute components
+    radial = r_pp - r * theta_p ** 2 - r * sin2_theta * phi_p ** 2
+    meridional = (r * theta_pp + 2 * r_p * theta_p -
+                  r * sin_theta * cos_theta * phi_p ** 2)
+    azimutal = (2 * r_p * phi_p * sin_theta +
+                2 * r * theta_p * phi_p * cos_theta +
+                r * sin_theta * phi_pp)
 
-    e_thetax = np.cos(theta) * np.cos(phi)
-    e_thetay = np.cos(theta) * np.sin(phi)
-    e_thetaz = - np.sin(theta)
+    # Cartesian acceleration components
+    x_pp = (radial * sin_theta * cos_phi +
+            meridional * cos_theta * cos_phi -
+            azimutal * sin_phi)
 
-    e_phix = - np.sin(phi)
-    e_phiy = np.cos(phi)
+    y_pp = (radial * sin_theta * sin_phi +
+            meridional * cos_theta * sin_phi +
+            azimutal * cos_phi)
 
-    theta_pp = np.gradient(theta_p)
-    phi_pp = np.gradient(phi_p)
-
-    # Radial
-    radial = r_pp - r * theta_p ** 2 - r * (np.sin(theta)) ** 2 * phi_p ** 2
-    # Meridional
-    meridional = r * theta_pp + 2 * r_p * theta_p - r * np.sin(
-        theta) * np.cos(theta) * phi_p ** 2
-    # Azimutal
-    azimutal = 2 * r_p * phi_p * np.sin(theta) + 2 * r * theta_p * phi_p * np.cos(
-        theta) + r * np.sin(theta) * phi_pp
-
-    x_pp = radial * e_rx + meridional * e_thetax + azimutal * e_phix  # m.s-1
-    y_pp = radial * e_ry + meridional * e_thetay + azimutal * e_phiy  # m.s-1
-    z_pp = radial * e_rz + meridional * e_thetaz  # m.s-1
+    z_pp = radial * cos_theta - meridional * sin_theta
 
     return x_pp, y_pp, z_pp
 
@@ -257,22 +267,78 @@ def t_physical(p, p_dot):
 
 
 def Cart_velocity_ramp(l_arm_proth, theta, phi, theta_arc, phi_arc, omega_max, accel, p):
-    N_points = len(theta_arc.tolist())
+    # Convert angular paths to numpy arrays
+    theta_arc = np.asarray(theta_arc)
+    phi_arc = np.asarray(phi_arc)
+    N_points = len(theta_arc)
 
-    pos_target = angular_dist(theta, 0, phi, 0)
-    t, vel_profile, accel_profile = speed_ramp(accel, omega_max, pos_target, N_points)
+    # Calculate total angular distance along the path
+    total_angular_distance = 0.0
+    for i in range(1, N_points):
+        dtheta = theta_arc[i] - theta_arc[i - 1]
+        dphi = phi_arc[i] - phi_arc[i - 1]
+        ds = np.sqrt(dtheta ** 2 + (np.sin(theta_arc[i - 1]) * dphi) ** 2)
+        total_angular_distance += ds
 
+    # Generate angular speed profile
+    t, omega_profile, _ = speed_ramp(accel, omega_max, total_angular_distance, N_points)
+
+    # Pre-calculate trig functions
+    sin_theta_arc = np.sin(theta_arc)
+    cos_theta_arc = np.cos(theta_arc)
+
+    # Compute path derivatives using central differences
+    dtheta = np.zeros(N_points)
+    dphi = np.zeros(N_points)
+
+    # First point (forward difference)
+    dtheta[0] = theta_arc[1] - theta_arc[0]
+    dphi[0] = phi_arc[1] - phi_arc[0]
+
+    # Interior points (central differences)
+    for i in range(1, N_points - 1):
+        dtheta[i] = (theta_arc[i + 1] - theta_arc[i - 1]) / 2.0
+        dphi[i] = (phi_arc[i + 1] - phi_arc[i - 1]) / 2.0
+
+    # Last point (backward difference)
+    dtheta[-1] = theta_arc[-1] - theta_arc[-2]
+    dphi[-1] = phi_arc[-1] - phi_arc[-2]
+
+    # Compute arc length derivatives
+    ds = np.sqrt(dtheta ** 2 + (sin_theta_arc * dphi) ** 2)
+
+    # Avoid division by zero
+    ds[ds == 0] = 1e-10
+
+    # Compute unit tangent components
+    u_theta = dtheta / ds
+    u_phi = (sin_theta_arc * dphi) / ds
+
+    # Compute angular velocities
+    theta_p = omega_profile * u_theta
+    phi_p = omega_profile * u_phi / np.where(sin_theta_arc > 1e-10, sin_theta_arc, 1)
+
+    # Compute angular accelerations
+    theta_pp = np.gradient(theta_p, t)
+    phi_pp = np.gradient(phi_p, t)
+
+    # Convert to Cartesian
     r = l_arm_proth
+    zeros = np.zeros(N_points)
 
-    theta_p, phi_p = Proj_velocity_spherical(r, theta_arc, phi_arc, vel_profile)
+    # Cartesian velocity
+    x_p, y_p, z_p = Spherical_to_cartesian_velocity(
+        r, theta_arc, phi_arc, zeros, theta_p, phi_p
+    )
 
-    x_p, y_p, z_p = Spherical_to_cartesian_velocity(r, theta_arc, phi_arc, 0, theta_p, phi_p)
-    x_pp, y_pp, z_pp = Spherical_to_cartesian_accel(r, theta_arc, phi_arc, 0, theta_p, phi_p, 0)
+    # Cartesian acceleration
+    x_pp, y_pp, z_pp = Spherical_to_cartesian_accel(
+        r, theta_arc, phi_arc, zeros, theta_p, phi_p, zeros, theta_pp, phi_pp
+    )
 
-    p_dot = np.array([x_p, y_p, z_p])
-    p_dotdot = np.array([x_pp, y_pp, z_pp])
-
-    t = t_physical(p, p_dot)
+    # Return results as 2D arrays
+    p_dot = np.vstack([x_p, y_p, z_p])
+    p_dotdot = np.vstack([x_pp, y_pp, z_pp])
 
     return p_dot, p_dotdot, t
 

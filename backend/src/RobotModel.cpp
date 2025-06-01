@@ -1,106 +1,20 @@
 #include "RobotModel.hpp"
-#include <nlohmann/json.hpp>
-#include <fstream>
+#include "HardcodedParams.hpp"
 #include <iostream>
 #include <cmath>
 #include <tuple>
+#include <stdexcept>
+#include <limits>
 
-using json = nlohmann::json;
-
-RobotDynamics::RobotDynamics() : initialized_(false) {}
+RobotDynamics::RobotDynamics() : initialized_(false) {
+}
 
 RobotDynamics::RobotDynamics(const RobotParams& params) 
     : params_(params), initialized_(true) {}
 
-
-bool RobotDynamics::loadFromConfig(const std::string& config_path) {
-    try {
-        std::ifstream file(config_path);
-        if (!file.is_open()) {
-            std::cerr << "Failed to open config file: " << config_path << std::endl;
-            return false;
-        }
-        
-        json config;
-        file >> config;
-
-        // Load Geometry ------------------------------------------------
-        auto& geom = config["geometry"];
-        params_.d = geom["d"];
-        
-        // Load arrays
-        auto& v = geom["v"];
-        params_.v_1 = v[0]; params_.v_2 = v[1]; params_.v_3 = v[2];
-        
-        auto& h = geom["h"];
-        params_.h_1 = h[0]; params_.h_2 = h[1]; params_.h_3 = h[2];
-        
-        auto& l1 = geom["l1"];
-        params_.l_11 = l1[0]; params_.l_12 = l1[1];
-        
-        auto& l2 = geom["l2"];
-        params_.l_21 = l2[0]; params_.l_22 = l2[1];
-        
-        auto& l3 = geom["l3"];
-        params_.l_31 = l3[0]; params_.l_32 = l3[1];
-
-        // Load Elbow/Shoulder Positions --------------------------------
-        auto& elbow = config["elbow"];
-        params_.vec_elbow << elbow["x"], elbow["y"], elbow["z"];
-        
-        auto& initial_pos = config["initial_pos"];
-        Eigen::Vector3d p_0(
-            initial_pos["x"], 
-            initial_pos["y"], 
-            initial_pos["z"]
-        );
-
-        params_.initial_pos = p_0;
-
-        // Compute l_arm_proth (norm between p0 and elbow)
-        params_.l_arm_proth = (p_0 - params_.vec_elbow).norm();
-
-        // Compute Shoulder Position ------------------------------------
-        double l_humerus = config["arm"]["l_humerus"];
-        double z_shoulder = config["shoulder"]["z"];
-        
-        double xy_shoulder_offset = std::sqrt(
-            (l_humerus * l_humerus - z_shoulder * z_shoulder) / 2.0
-        );
-        
-        params_.vec_shoulder << 
-            params_.vec_elbow.x() + xy_shoulder_offset,
-            params_.vec_elbow.y() + xy_shoulder_offset,
-            z_shoulder;
-
-        // Load Mass Parameters -----------------------------------------
-        auto& mass = config["mass"];
-
-        auto& m1 = mass["m_1"];
-        params_.m_11 = m1[0]; params_.m_12 = m1[1];
-        
-        auto& m2 = mass["m_2"];
-        params_.m_21 = m2[0]; params_.m_22 = m2[1];
-
-        auto& m3 = mass["m_3"];
-        params_.m_31 = m3[0]; params_.m_32 = m3[1];
-        
-        double m_d_seul = mass["m_d_seul"];
-        double m_bras = mass["m_bras"];
-        params_.m_d = m_d_seul + m_bras;  // Computed parameter
-
-        // Validate critical parameters
-        if (params_.l_arm_proth <= 0 || params_.m_d <= 0) {
-            throw std::runtime_error("Invalid computed parameters");
-        }
-
-        initialized_ = true;
-        return true;
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Config error: " << e.what() << "\n";
-        return false;
-    }
+void RobotDynamics::loadHardcodedParams() {
+    ::loadHardcodedParams(params_);
+    initialized_ = true;
 }
 
 void RobotDynamics::setParameters(const RobotParams& params) {
@@ -108,7 +22,6 @@ void RobotDynamics::setParameters(const RobotParams& params) {
     initialized_ = true;
 }
 
-// K matrix computation (based on analytic.py K function)
 Eigen::Matrix3d RobotDynamics::computeK(const Eigen::Vector3d& pos, 
                                         const Eigen::Vector3d& theta) const {
     if (!initialized_) {
@@ -116,17 +29,28 @@ Eigen::Matrix3d RobotDynamics::computeK(const Eigen::Vector3d& pos,
     }
     
     double x = pos(0), y = pos(1), z = pos(2);
-    double theta_1 = theta(0), theta_2 = theta(1), theta_3 = theta(2);
+    double th1 = theta(0), th2 = theta(1), th3 = theta(2);
     
-    Eigen::Matrix3d K;
-    K << y * sin(theta_1) - x * cos(theta_1), 0, 0,
-         0, y * sin(theta_2) - x * cos(theta_2), 0,
-         0, 0, (z + params_.d - params_.v_3 - params_.h_3) * sin(theta_3) + x * cos(theta_3);
+    Eigen::Matrix3d K = Eigen::Matrix3d::Zero();
+    
+    // Leg 1
+    double term1x = -params_.a1x - params_.l_11*cos(th1) + x;
+    double term1y = -params_.a1y - params_.l_11*sin(th1) + y;
+    K(0,0) = params_.l_11 * (term1x*sin(th1) - term1y*cos(th1));
+    
+    // Leg 2
+    double term2x = -params_.a2x - params_.l_21*cos(th2) + x;
+    double term2y = -params_.a2y - params_.l_21*sin(th2) + y;
+    K(1,1) = params_.l_21 * (term2x*sin(th2) - term2y*cos(th2));
+    
+    // Leg 3
+    double term3x = -params_.a3x - params_.l_31*cos(th3) + x;
+    double term3z = -params_.h_3 - params_.l_31*sin(th3) + params_.v_3 + z;
+    K(2,2) = params_.l_31 * (term3x*sin(th3) - term3z*cos(th3));
     
     return K;
 }
 
-// J matrix computation (based on analytic.py J function)
 Eigen::Matrix3d RobotDynamics::computeJ(const Eigen::Vector3d& pos, 
                                         const Eigen::Vector3d& theta) const {
     if (!initialized_) {
@@ -134,75 +58,90 @@ Eigen::Matrix3d RobotDynamics::computeJ(const Eigen::Vector3d& pos,
     }
     
     double x = pos(0), y = pos(1), z = pos(2);
-    double theta_1 = theta(0), theta_2 = theta(1), theta_3 = theta(2);
+    double th1 = theta(0), th2 = theta(1), th3 = theta(2);
     
     Eigen::Matrix3d J;
-    J << x + params_.l_11 * sin(theta_1), 
-         y + params_.l_11 * cos(theta_1), 
-         z + params_.d - params_.v_1 - params_.h_1,
-         
-         x + params_.l_21 * sin(theta_2), 
-         y + params_.l_21 * cos(theta_2), 
-         z + params_.d - params_.v_2 - params_.h_2,
-         
-         x + params_.l_31 * sin(theta_3), 
-         y, 
-         z + params_.d - params_.v_3 - params_.h_3 + params_.l_31 * cos(theta_3);
+    
+    // Leg 1
+    J(0,0) = -params_.a1x - params_.l_11*cos(th1) + x;
+    J(0,1) = -params_.a1y - params_.l_11*sin(th1) + y;
+    J(0,2) = -params_.h_1 + params_.v_1 + z;
+    
+    // Leg 2
+    J(1,0) = -params_.a2x - params_.l_21*cos(th2) + x;
+    J(1,1) = -params_.a2y - params_.l_21*sin(th2) + y;
+    J(1,2) = -params_.h_2 + params_.v_2 + z;
+    
+    // Leg 3
+    J(2,0) = -params_.a3x - params_.l_31*cos(th3) + x;
+    J(2,1) = -params_.a3y + y;
+    J(2,2) = -params_.h_3 - params_.l_31*sin(th3) + params_.v_3 + z;
     
     return J;
 }
 
-// K_dot computation (based on analytic.py K_dot function)
 Eigen::Matrix3d RobotDynamics::computeKDot(const Eigen::Vector3d& pos,
                                            const Eigen::Vector3d& vel,
                                            const Eigen::Vector3d& theta,
                                            const Eigen::Vector3d& theta_dot) const {
-    if (!initialized_) {
-        throw std::runtime_error("RobotDynamics not initialized");
-    }
-    
     double x = pos(0), y = pos(1), z = pos(2);
-    double xp = vel(0), yp = vel(1), zp = vel(2);
-    double theta_1 = theta(0), theta_2 = theta(1), theta_3 = theta(2);
-    double theta_1p = theta_dot(0), theta_2p = theta_dot(1), theta_3p = theta_dot(2);
+    double xd = vel(0), yd = vel(1), zd = vel(2);
+    double th1 = theta(0), th2 = theta(1), th3 = theta(2);
+    double th1d = theta_dot(0), th2d = theta_dot(1), th3d = theta_dot(2);
     
-    Eigen::Matrix3d K_dot;
-    K_dot << yp * sin(theta_1) - xp * cos(theta_1) + theta_1p * (y * cos(theta_1) + x * sin(theta_1)), 0, 0,
-             0, yp * sin(theta_2) - xp * cos(theta_2) + theta_2p * (y * cos(theta_2) + x * sin(theta_2)), 0,
-             0, 0, zp * sin(theta_3) + xp * cos(theta_3) + theta_3p * ((z + params_.d - params_.v_3 - params_.h_3) * cos(theta_3) - x * sin(theta_3));
+    Eigen::Matrix3d K_dot = Eigen::Matrix3d::Zero();
+    
+    // Leg 1
+    K_dot(0,0) = params_.l_11 * (
+        (-params_.a1x*cos(th1) - params_.a1y*sin(th1) + 
+         x*cos(th1) + y*sin(th1)) * th1d +
+        sin(th1)*xd - cos(th1)*yd
+    );
+    
+    // Leg 2
+    K_dot(1,1) = params_.l_21 * (
+        (-params_.a2x*cos(th2) - params_.a2y*sin(th2) + 
+         x*cos(th2) + y*sin(th2)) * th2d +
+        sin(th2)*xd - cos(th2)*yd
+    );
+    
+    // Leg 3
+    K_dot(2,2) = params_.l_31 * (
+        (-params_.a3x*cos(th3) - params_.h_3*sin(th3) + params_.v_3*sin(th3) + 
+         x*cos(th3) + z*sin(th3)) * th3d +
+        sin(th3)*xd - cos(th3)*zd
+    );
     
     return K_dot;
 }
 
-// J_dot computation (based on analytic.py J_dot function)
 Eigen::Matrix3d RobotDynamics::computeJDot(const Eigen::Vector3d& vel,
                                            const Eigen::Vector3d& theta,
                                            const Eigen::Vector3d& theta_dot) const {
-    if (!initialized_) {
-        throw std::runtime_error("RobotDynamics not initialized");
-    }
-    
-    double xp = vel(0), yp = vel(1), zp = vel(2);
-    double theta_1 = theta(0), theta_2 = theta(1), theta_3 = theta(2);
-    double theta_1p = theta_dot(0), theta_2p = theta_dot(1), theta_3p = theta_dot(2);
+    double xd = vel(0), yd = vel(1), zd = vel(2);
+    double th1 = theta(0), th2 = theta(1), th3 = theta(2);
+    double th1d = theta_dot(0), th2d = theta_dot(1), th3d = theta_dot(2);
     
     Eigen::Matrix3d J_dot;
-    J_dot << xp + params_.l_11 * theta_1p * cos(theta_1), 
-             yp - params_.l_11 * theta_1p * cos(theta_1), 
-             zp,
-             
-             xp + params_.l_21 * theta_2p * cos(theta_2), 
-             yp - params_.l_21 * theta_2p * cos(theta_2), 
-             zp,
-             
-             xp + params_.l_31 * theta_3p * cos(theta_3), 
-             yp, 
-             zp - params_.l_31 * theta_3p * sin(theta_3);
+    
+    // Leg 1
+    J_dot(0,0) = params_.l_11*sin(th1)*th1d + xd;
+    J_dot(0,1) = -params_.l_11*cos(th1)*th1d + yd;
+    J_dot(0,2) = zd;
+    
+    // Leg 2
+    J_dot(1,0) = params_.l_21*sin(th2)*th2d + xd;
+    J_dot(1,1) = -params_.l_21*cos(th2)*th2d + yd;
+    J_dot(1,2) = zd;
+    
+    // Leg 3
+    J_dot(2,0) = params_.l_31*sin(th3)*th3d + xd;
+    J_dot(2,1) = yd;
+    J_dot(2,2) = -params_.l_31*cos(th3)*th3d + zd;
     
     return J_dot;
 }
 
-// Motor speed computation (based on analytic.py Compute_motor_speed)
 Eigen::Vector3d RobotDynamics::computeMotorSpeed(const Eigen::Vector3d& pos,
                                                 const Eigen::Vector3d& vel,
                                                 const Eigen::Vector3d& theta) const {
@@ -213,14 +152,11 @@ Eigen::Vector3d RobotDynamics::computeMotorSpeed(const Eigen::Vector3d& pos,
     Eigen::Matrix3d K = computeK(pos, theta);
     Eigen::Matrix3d J = computeJ(pos, theta);
     
-    // Safe inversion of K
     Eigen::Matrix3d K_inv = dampedPseudoInverse(K);
-    
     Eigen::Matrix3d Jacobian_prod = K_inv * J;
     return Jacobian_prod * vel;
 }
 
-// Motor acceleration computation (based on analytic.py Compute_motor_accel)
 Eigen::Vector3d RobotDynamics::computeMotorAccel(const Eigen::Vector3d& pos,
                                                 const Eigen::Vector3d& vel,
                                                 const Eigen::Vector3d& accel,
@@ -240,150 +176,69 @@ Eigen::Vector3d RobotDynamics::computeMotorAccel(const Eigen::Vector3d& pos,
     Eigen::Vector3d J_3 = K_dot * theta_dot;
     Eigen::Vector3d J_sum = J_1 + J_2 - J_3;
     
-    // Safe inversion of K
     Eigen::Matrix3d K_inv = dampedPseudoInverse(K);
-    
     return K_inv * J_sum;
 }
 
-Eigen::Matrix3d RobotDynamics::computeMassMatrix(const Eigen::Vector3d& theta, const Eigen::Vector3d& pos) const {
+Eigen::Matrix3d RobotDynamics::computeMassMatrix(const Eigen::Vector3d& theta, 
+                                                 const Eigen::Vector3d& pos) const {
     Eigen::Matrix3d M = Eigen::Matrix3d::Zero();
     
-    // Proximal links (1/4 term) and distal links (1/3 term) based on slender link method
+    // Proximal links with added distal point masses
+    M(0,0) = (params_.m_11/4.0 + params_.m_12/2.0) * params_.l_11 * params_.l_11;
+    M(1,1) = (params_.m_21/4.0 + params_.m_22/2.0) * params_.l_21 * params_.l_21;
+    M(2,2) = (params_.m_31/4.0 + params_.m_32/2.0) * params_.l_31 * params_.l_31;
 
-    M(0,0) = (params_.m_11 / 4.0) * pow(params_.l_11, 2) 
-           + (params_.m_12 / 3.0) * pow(params_.l_11, 2);
-    
-    M(1,1) = (params_.m_21 / 4.0) * pow(params_.l_21, 2) 
-           + (params_.m_22 / 3.0) * pow(params_.l_21, 2);
-    
-    M(2,2) = (params_.m_31 / 4.0) * pow(params_.l_31, 2) 
-           + (params_.m_32 / 3.0) * pow(params_.l_31, 2);
-
+        // Add forearm inertia using 1/3-2/3 distribution
+    double I_arm = (1.0/3.0) * params_.m_arm * params_.l_arm_proth * params_.l_arm_proth;
     Eigen::Matrix3d J = computeJ(pos, theta);
-
-    // Inertia of the platform + payload (human arm)
-    double I_arm = (1.0/3.0) * params_.m_d * pow(params_.l_arm_proth, 2);
-
-    // Effective mass terms (inertial force)
-    double m_eff = params_.m_d + I_arm/pow(params_.l_arm_proth, 2);
-
-    M += J.transpose() * m_eff * J;
+    Eigen::Matrix3d K = computeK(pos, theta);
+    Eigen::Matrix3d Jacob = dampedPseudoInverse(J) * K;
+    
+    // Add platform mass contribution (point mass at end effector)
+    M += Jacob.transpose() * (params_.m_d + I_arm/(params_.l_arm_proth * params_.l_arm_proth)) * Jacob;
 
     return M;
 }
 
-Eigen::Vector3d RobotDynamics::computeCoriolis(
-    const Eigen::Vector3d& x, 
-    const Eigen::Vector3d& x_dot,
-    const Eigen::Vector3d& theta, 
-    const Eigen::Vector3d& theta_dot
-) const {
-    // Platform velocity (x_dot = [x_p, y_p, z_p])
-    double xp = x_dot(0), yp = x_dot(1), zp = x_dot(2);
+Eigen::Vector3d RobotDynamics::computeGravity(const Eigen::Vector3d& theta, const Eigen::Vector3d& pos) const {
+    double th1 = theta(0), th2 = theta(1), th3 = theta(2);
+    double x = pos(0), y = pos(1), z = pos(2);
+    
+    // Leg 3 has different orientation (xz-plane motion)
+    double G3 = (params_.m_31/2.0 + params_.m_32 + params_.m_12/2.0 + params_.m_12/2.0) * GRAVITY * params_.l_31 * sin(th3);
 
-    // Joint angles and velocities
-    double theta_1 = theta(0), theta_2 = theta(1), theta_3 = theta(2);
-    double theta_1p = theta_dot(0), theta_2p = theta_dot(1), theta_3p = theta_dot(2);
-
-    // Coriolis terms for slender link method
-    Eigen::Vector3d C;
-
-    // Proximal link contributions
-    double C1_prox = (params_.m_12 / 6.0) * params_.l_11 * 
-                    (yp * sin(theta_1) - xp * cos(theta_1)) * theta_1p;
-
-    double C2_prox = (params_.m_22 / 6.0) * params_.l_21 * 
-                    (yp * sin(theta_2) - xp * cos(theta_2)) * theta_2p;
-
-    double C3_prox = (params_.m_32 / 6.0) * params_.l_31 * 
-                    (zp * sin(theta_3) + xp * cos(theta_3)) * theta_3p;
-
-    // Distal link contributions
-    Eigen::Matrix3d J = computeJ(x, theta);
-    Eigen::Matrix3d J_dot = computeJDot(x_dot, theta, theta_dot);
-
-    Eigen::Vector3d C_distal;
-    for (int i = 0; i < 3; i++) {
-        double distal_mass;
-        switch(i) {
-            case 0: distal_mass = params_.m_12; break;
-            case 1: distal_mass = params_.m_22; break;
-            case 2: distal_mass = params_.m_32; break;
-            default: distal_mass = 0;
-        }
-
-        C_distal(i) = (distal_mass / 6.0) * (
-            J.row(i).dot(J_dot.col(i)) + 
-            J_dot.row(i).dot(J.col(i))    
-            ) * theta_dot(i);
-    }
-
-    // Total Coriolis terms
-    C << C1_prox + C_distal(0), 
-         C2_prox + C_distal(1), 
-         C3_prox + C_distal(2);
-
-    return C;
-}
-
-Eigen::Vector3d RobotDynamics::computeGravity(const Eigen::Vector3d& theta) const {
-    double theta_3 = theta(2);
-    double G3 = params_.m_31 * GRAVITY * params_.l_31 * sin(theta_3);
-    return Eigen::Vector3d(0.0, 0.0, G3);
-}
-
-Eigen::Vector3d RobotDynamics::computePlatformForces(
-    const Eigen::Vector3d& theta,
-    const Eigen::Vector3d& theta_dot
-) const {
-    double theta_1 = theta(0), theta_2 = theta(1), theta_3 = theta(2);
-    double theta_1p = theta_dot(0), theta_2p = theta_dot(1), theta_3p = theta_dot(2);
-
-    // Centrifugal terms (joint 1, 2, 3)
-    double centrifugal_1 = (params_.m_12 * params_.l_11 / 6.0) * pow(theta_1p, 2) * (-cos(theta_1));
-    double centrifugal_2 = (params_.m_22 * params_.l_21 / 6.0) * pow(theta_2p, 2) * (-sin(theta_2));
-    double centrifugal_3 = (params_.m_32 * params_.l_31 / 6.0) * pow(theta_3p, 2) * (-sin(theta_3));
-
-    // Gravitational force (z-direction only)
-    double gravity = GRAVITY * (params_.m_12 + params_.m_22 + params_.m_32 + params_.m_d) * 0.5;
-
-    return Eigen::Vector3d(centrifugal_1, centrifugal_2, centrifugal_3 + gravity);
+    // Add forearm gravity (distributed 50/50 between endpoints)
+    // Elbow contribution is constant (z_shoulder) so only end effector contributes
+    G3 += (params_.m_arm/2.0) * GRAVITY * z;
+    
+    // Add platform gravity at end effector
+    G3 += params_.m_d * GRAVITY * z;
+              
+    return Eigen::Vector3d(0, 0, G3);
 }
 
 Eigen::Vector3d RobotDynamics::computeForwardDynamics(
     const Eigen::Vector3d& theta,
     const Eigen::Vector3d& theta_dot,
     const Eigen::Vector3d& torque,
-    const Eigen::Vector3d& pos,            // Task-space position
-    const Eigen::Vector3d& vel             // Task-space acceleration
+    const Eigen::Vector3d& pos,
+    const Eigen::Vector3d& vel
 ) const {
     if (!initialized_) {
         throw std::runtime_error("RobotDynamics not initialized");
     }
 
-    // Compute platform forces
-    Eigen::Vector3d f_e = computePlatformForces(theta, theta_dot);
-
-    // Map task-space forces to joint space
-    Eigen::Matrix3d J = computeJ(pos, theta);
-    Eigen::Vector3d tau_ext = J.transpose() * f_e;
-
     // Compute dynamics terms
-
     Eigen::Matrix3d M = computeMassMatrix(theta, pos);
-    Eigen::Vector3d C = computeCoriolis(pos, vel, theta, theta_dot);
-    Eigen::Vector3d G = computeGravity(theta);
+    Eigen::Vector3d G = computeGravity(theta, pos);
+    
+    // Friction model
+    Eigen::Vector3d friction = -0.1 * theta_dot;
 
-    // Safe inversion with damping for diagonal matrix K
     Eigen::Matrix3d M_inv = dampedPseudoInverse(M);
 
-    // In RobotModel.cpp:
-    Eigen::Vector3d friction = 
-        -0.3 * theta_dot.normalized()  // Coulomb friction
-        -0.1 * theta_dot;              // Viscous friction
-
-    return M_inv * (torque - tau_ext - C - G + friction);
+    return M_inv * (torque - G + friction);
 }
 
 Eigen::Vector3d RobotDynamics::computeTorque(
@@ -394,29 +249,17 @@ Eigen::Vector3d RobotDynamics::computeTorque(
     const Eigen::Vector3d& theta_dot,
     const Eigen::Vector3d& theta_ddot
 ) const {
-    if (!initialized_) {
-        throw std::runtime_error("RobotDynamics not initialized");
-    }
-
-    // Compute motor torques using existing helper functions
+    // Compute basic torques
     Eigen::Matrix3d M = computeMassMatrix(theta, pos);
-    Eigen::Vector3d C = computeCoriolis(pos, vel, theta, theta_dot);
-    Eigen::Vector3d G = computeGravity(theta);
-    Eigen::Vector3d tau_e = M * theta_ddot + C + G;
+    Eigen::Vector3d G = computeGravity(theta, pos);
+    Eigen::Vector3d tau_e = M * theta_ddot + G;
 
-    // Compute platform forces (f_e)
-    Eigen::Vector3d f_e = computePlatformForces(theta, theta_dot);
-
-    // Compute Jacobian terms using existing functions
-    Eigen::Matrix3d J = computeJ(pos, theta);
-    Eigen::Matrix3d K = computeK(pos, theta);
-    Eigen::Matrix3d J_inv = dampedPseudoInverse(J);
-    Eigen::Matrix3d Jacob = J_inv * K;
-
-    return tau_e + Jacob.transpose() * f_e;
+    // Friction model
+    Eigen::Vector3d friction = -0.1 * theta_dot;
+    
+    return tau_e + friction;
 }
 
-// Complete inverse dynamics computation
 RobotDynamics::DynamicsResult RobotDynamics::computeInverseDynamics(
     const Eigen::Vector3d& pos,
     const Eigen::Vector3d& vel,
@@ -432,15 +275,9 @@ RobotDynamics::DynamicsResult RobotDynamics::computeInverseDynamics(
     }
     
     try {
-        // Compute motor velocities
         result.theta_dot = computeMotorSpeed(pos, vel, theta);
-        
-        // Compute motor accelerations
         result.theta_ddot = computeMotorAccel(pos, vel, accel, theta, result.theta_dot);
-        
-        // Compute torques
         result.torque = computeTorque(pos, vel, accel, theta, result.theta_dot, result.theta_ddot);
-        
         result.success = true;
     }
     catch (const std::exception& e) {
@@ -450,55 +287,12 @@ RobotDynamics::DynamicsResult RobotDynamics::computeInverseDynamics(
     return result;
 }
 
-Eigen::Vector3d RobotDynamics::computeRK4Integration(
-    const Eigen::Vector3d& theta,
-    const Eigen::Vector3d& theta_dot,
-    const Eigen::Vector3d& torque,
-    const Eigen::Vector3d& pos,
-    const Eigen::Vector3d& vel,
-    double dt) const 
-{
-    if (!initialized_) {
-        throw std::runtime_error("RobotDynamics not initialized");
-    }
-
-    // RK4 integration for θ̈ = M⁻¹(τ - C - G)
-    auto computeAccel = [&](const Eigen::Vector3d& th, 
-                           const Eigen::Vector3d& th_dot,
-                           const Eigen::Vector3d& pos_current,
-                           const Eigen::Vector3d& vel_current) {
-        return computeForwardDynamics(th, th_dot, torque, pos_current, vel_current);
-    };
-
-    // k1
-    Eigen::Vector3d k1 = computeAccel(theta, theta_dot, pos, vel);
-
-    // k2
-    Eigen::Vector3d theta_k2 = theta + 0.5*dt*theta_dot;
-    Eigen::Vector3d theta_dot_k2 = theta_dot + 0.5*dt*k1;
-    Eigen::Vector3d k2 = computeAccel(theta_k2, theta_dot_k2, pos, vel);
-
-    // k3
-    Eigen::Vector3d theta_k3 = theta + 0.5*dt*theta_dot;
-    Eigen::Vector3d theta_dot_k3 = theta_dot + 0.5*dt*k2;
-    Eigen::Vector3d k3 = computeAccel(theta_k3, theta_dot_k3, pos, vel);
-
-    // k4
-    Eigen::Vector3d theta_k4 = theta + dt*theta_dot;
-    Eigen::Vector3d theta_dot_k4 = theta_dot + dt*k3;
-    Eigen::Vector3d k4 = computeAccel(theta_k4, theta_dot_k4, pos, vel);
-
-    // Final integration
-    return theta_dot + (dt/6.0)*(k1 + 2*k2 + 2*k3 + k4);
-}
-
-// Utility functions
 Eigen::Matrix3d RobotDynamics::dampedPseudoInverse(
     const Eigen::Matrix3d& matrix, 
-    double lambda_tikhonov,  // Tikhonov damping parameter (e.g., 1e-3)
-    double epsilon_diag      // Diagonal damping parameter (for K matrix)
+    double lambda_tikhonov,
+    double epsilon_diag
 ) const {
-    // Check if the matrix is diagonal (for K matrix)
+    // Diagonal matrix handling
     bool is_diagonal = true;
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
@@ -511,7 +305,6 @@ Eigen::Matrix3d RobotDynamics::dampedPseudoInverse(
     }
 
     if (is_diagonal) {
-        // Diagonal damping: Invert diagonal elements with epsilon
         Eigen::Matrix3d inv = Eigen::Matrix3d::Zero();
         for (int i = 0; i < 3; ++i) {
             double val = matrix(i, i);
@@ -521,8 +314,6 @@ Eigen::Matrix3d RobotDynamics::dampedPseudoInverse(
         }
         return inv;
     } else {
-        // Tikhonov damping for non-diagonal matrices (e.g., Jacobian)
-        // Formula: J⁺ = Jᵀ * (J * Jᵀ + λ²I)^-1
         Eigen::Matrix3d JJT = matrix * matrix.transpose();
         Eigen::Matrix3d damping = (lambda_tikhonov * lambda_tikhonov) * Eigen::Matrix3d::Identity();
         Eigen::Matrix3d JJT_damped = JJT + damping;
@@ -531,74 +322,361 @@ Eigen::Matrix3d RobotDynamics::dampedPseudoInverse(
     }
 }
 
-
-RobotDynamics::IKSolution RobotDynamics::invKineSinglePoint(const Eigen::Vector3d& p, const Eigen::Vector3d& theta_prev) const {
-    using std::atan, std::sqrt, std::runtime_error;
-
+RobotDynamics::IKSolution RobotDynamics::invKineSinglePoint(
+    const Eigen::Vector3d& p, 
+    const Eigen::Vector3d& theta_prev) const 
+{
+    using namespace std;
     if (!initialized_) throw runtime_error("RobotDynamics not initialized");
+    
+    constexpr double PI = 3.14159265358979323846;
+    constexpr double JOINT_LIMIT = PI - 0.1;  // Symmetric limit for all joints
 
-    const Eigen::Vector3d z_vec(0, 0, 1);
+    // Geometric parameters
+    const double d = params_.d;
+    const double l11 = params_.l_11, l12 = params_.l_12;
+    const double l21 = params_.l_21, l22 = params_.l_22;
+    const double l31 = params_.l_31, l32 = params_.l_32;
+    const double v1 = params_.v_1, v2 = params_.v_2, v3 = params_.v_3;
+    const double h1 = params_.h_1, h2 = params_.h_2, h3 = params_.h_3;
 
-    // m_i = (0, 0, h_i)
-    Eigen::Vector3d m_1(0, 0, params_.h_1);
-    Eigen::Vector3d m_2(0, 0, params_.h_2);
-    Eigen::Vector3d m_3(0, 0, params_.h_3);
+    // Anchor points
+    const Eigen::Vector3d a1(params_.a1x, params_.a1y, h1);
+    const Eigen::Vector3d a2(params_.a2x, params_.a2y, h2);
+    const Eigen::Vector3d a3(params_.a3x, params_.a3y, h3);
 
-    // A and B
-    double A1 = 2 * p.y(), B1 = 2 * p.x();
-    double A2 = 2 * p.y(), B2 = 2 * p.x();
-    double A3 = 2 * (-params_.h_3 + (p.z() + params_.d - params_.v_3));
-    double B3 = -2 * p.x();
+    // Distal points
+    const Eigen::Vector3d b1 = p + Eigen::Vector3d(0, 0, d - v1);
+    const Eigen::Vector3d b2 = p + Eigen::Vector3d(0, 0, d - v2);
+    const Eigen::Vector3d b3 = p + Eigen::Vector3d(0, 0, d - v3);
 
-    // C helper
-    auto computeC = [&](const Eigen::Vector3d& m, double l1, double l2, double v) {
-        Eigen::Vector3d offset = (params_.d - v) * z_vec;
-        double norm_sq = (m - (p + offset)).squaredNorm();
-        return (l2 * l2 - l1 * l1 - norm_sq) / l1;
+    // Calculate coefficients
+    auto computeC = [](const Eigen::Vector3d& a, const Eigen::Vector3d& b, double l1, double l2) {
+        return (l2*l2 - l1*l1 - (a - b).squaredNorm()) / l1;
     };
 
-    double C1 = computeC(m_1, params_.l_11, params_.l_12, params_.v_1);
-    double C2 = computeC(m_2, params_.l_21, params_.l_22, params_.v_2);
-    double C3 = computeC(m_3, params_.l_31, params_.l_32, params_.v_3);
+    // Leg 1 coefficients
+    const double A1 = 2*(b1.y() - a1.y());
+    const double B1 = 2*(b1.x() - a1.x());
+    const double C1 = computeC(a1, b1, l11, l12);
+    
+    // Leg 2 coefficients
+    const double A2 = 2*(b2.y() - a2.y());
+    const double B2 = 2*(b2.x() - a2.x());
+    const double C2 = computeC(a2, b2, l21, l22);
+    
+    // Leg 3 coefficients
+    const double A3 = 2*(b3.z() - a3.z());
+    const double B3 = 2*(a3.x() - b3.x());
+    const double C3 = computeC(a3, b3, l31, l32);
 
-    // Solve quadratic: returns 0, 1 or 2 roots
-    auto solve_t = [](double A, double B, double C, std::vector<double>& out) {
-        double disc = B * B - (A + C) * (C - A);
-        if (disc < 0 || std::abs(A + C) < 1e-8) return;
-        double denom = A + C;
-        double sqrt_disc = sqrt(disc);
-        out.push_back((B + sqrt_disc) / denom);
-        out.push_back((B - sqrt_disc) / denom);
+    // Solve for t parameters
+    auto solveLeg = [](double A, double B, double C, int leg_num) -> vector<double> {
+        vector<double> solutions;
+        const double denom = A + C;
+        
+        if (fabs(denom) < 1e-8) {
+            cerr << "Leg " << leg_num << ": Singular denominator (A+C ≈ 0)\n";
+            return solutions;
+        }
+        
+        const double discriminant = B*B - (A + C)*(C - A);
+        if (discriminant < 0) {
+            return solutions;
+        }
+
+        const double sqrt_disc = sqrt(discriminant);
+        solutions.push_back((B + sqrt_disc) / denom);
+        solutions.push_back((B - sqrt_disc) / denom);
+        return solutions;
     };
 
-    std::vector<double> t1, t2, t3;
-    solve_t(A1, B1, C1, t1);
-    solve_t(A2, B2, C2, t2);
-    solve_t(A3, B3, C3, t3);
+    // Get all possible t solutions
+    vector<double> t1 = solveLeg(A1, B1, C1, 1);
+    vector<double> t2 = solveLeg(A2, B2, C2, 2);
+    vector<double> t3 = solveLeg(A3, B3, C3, 3);
 
-    double best_cost = std::numeric_limits<double>::max();
+    // Prepare solution structures
     IKSolution best_solution;
+    best_solution.valid = false;
+    double min_joint_dist = numeric_limits<double>::max();
+    double min_pos_error = numeric_limits<double>::max();
 
-    for (double t1i : t1) {
-        for (double t2i : t2) {
-            for (double t3i : t3) {
-                double th1 = 2 * atan(t1i);
-                double th2 = 2 * atan(t2i);
-                double th3 = 2 * atan(t3i);
-
+    // Generate all candidate solutions
+    vector<Eigen::Vector3d> candidates;
+    
+    for (double t1_val : t1) {
+        for (double t2_val : t2) {
+            for (double t3_val : t3) {
+                double th1 = 2 * atan(t1_val);
+                double th2 = 2 * atan(t2_val);
+                double th3 = 2 * atan(t3_val);
+                
                 Eigen::Vector3d candidate(th1, th2, th3);
-                if (!candidate.allFinite()) continue;
-
-                double cost = (candidate - theta_prev).squaredNorm();
-
-                if (cost < best_cost) {
-                    best_cost = cost;
-                    best_solution.theta = candidate;
-                    best_solution.valid = true;
-                }
+                
+                // Check symmetric joint limits
+                bool limits_ok = (th1 >= -JOINT_LIMIT && th1 <= JOINT_LIMIT) &&
+                                 (th2 >= -JOINT_LIMIT && th2 <= JOINT_LIMIT) &&
+                                 (th3 >= -JOINT_LIMIT && th3 <= JOINT_LIMIT);
+                if (!limits_ok) continue;
+                
+                candidates.push_back(candidate);
             }
         }
     }
+    
+    // If no solutions, use previous configuration
+    if (candidates.empty()) {
+        cerr << "No IK solutions for position: " << p.transpose() << "\n";
+        candidates.push_back(theta_prev);
+    }
+    
+    // Configuration type detector
+    auto get_config_type = [PI](const Eigen::Vector3d& theta) {
+        Eigen::Vector3d config_type;
+        for (int i = 0; i < 3; i++) {
+            double angle = std::fmod(theta(i) + 2*PI, 2*PI);
+            config_type(i) = (angle > PI) ? 1 : 0;
+        }
+        return config_type;
+    };
+
+    Eigen::Vector3d prev_config_type = get_config_type(theta_prev);
+
+    // Evaluate all candidate solutions
+    for (const auto& theta_candidate : candidates) {
+        // Compute forward kinematics
+        const Eigen::Vector3d p_fk = forwardKinematics(theta_candidate, p);
+        const double pos_error = (p_fk - p).norm();
+        
+        // Skip solutions with large position errors
+        if (pos_error > 1e-3) continue;
+
+        // Calculate joint space continuity metric
+        const double joint_dist = (theta_candidate - theta_prev).norm();
+        
+        // Configuration type matching
+        Eigen::Vector3d candidate_config = get_config_type(theta_candidate);
+        double config_match = (candidate_config - prev_config_type).norm();
+        double config_score = 1.0 - std::min(config_match, 1.0);
+        
+        // Combined selection metric
+        double selection_metric = 0.8*joint_dist - 0.2*config_score;
+
+        // Track best solution
+        if (selection_metric < min_joint_dist) {
+            min_joint_dist = selection_metric;
+            best_solution.theta = theta_candidate;
+            best_solution.valid = true;
+            min_pos_error = pos_error;
+        }
+    }
+
+    // Final validation and diagnostics
+    if (best_solution.valid) {
+        const Eigen::Vector3d p_fk = forwardKinematics(best_solution.theta, p);
+        const double final_error = (p_fk - p).norm();
+        
+        if (final_error > 5e-3) {
+            cerr << "Large FK error: " << final_error 
+                 << " at " << p.transpose() 
+                 << "\nIK solution: " << best_solution.theta.transpose()
+                 << "\nFK position: " << p_fk.transpose() << "\n";
+        }
+    } else {
+        cerr << "IK failed for position: " << p.transpose() 
+             << " - Using previous joint angles\n";
+        best_solution.theta = theta_prev;
+        best_solution.valid = true;
+    }
 
     return best_solution;
+}
+
+Eigen::Vector3d circleSphereIntersection(
+    const Eigen::Vector3d& A, const Eigen::Vector3d& B, const Eigen::Vector3d& C,
+    double rA, double rB, double rC, const Eigen::Vector3d& ref_pos) 
+{
+    constexpr double epsilon = 1e-8;
+    const Eigen::Vector3d d12 = B - A;
+    const double d = d12.norm();
+    
+    if (d > rA + rB || d < std::abs(rA - rB)) {
+        //std::cerr << "FK Warning: Spheres don't intersect\n";
+        return ref_pos;
+    }
+
+    if (d < 1e-8) {
+        //std::cerr << "FK Warning: Spheres A and B are concentric\n";
+        return ref_pos;
+    }
+    
+    const double a = (rA*rA - rB*rB + d*d) / (2*d);
+    const double h = std::sqrt(rA*rA - a*a);
+    const Eigen::Vector3d p0 = A + a * d12.normalized();
+    
+    Eigen::Vector3d u = d12.unitOrthogonal();
+    Eigen::Vector3d v = d12.cross(u).normalized();
+    
+    const double F0 = (p0 - C).squaredNorm();
+    const double RHS = (rC*rC - F0 - h*h) / (2*h);
+    const double D = (p0 - C).dot(u);
+    const double E = (p0 - C).dot(v);
+    const double R = std::sqrt(D*D + E*E);
+    
+    if (std::abs(R) < epsilon || std::abs(RHS) > R) {
+        //std::cerr << "FK Warning: No circle-sphere intersection\n";
+        return ref_pos;
+    }
+    
+    const double alpha = std::atan2(E, D);
+    const double phi0 = std::acos(RHS / R);
+    const double phi1 = alpha - phi0;
+    const double phi2 = alpha + phi0;
+    
+    const Eigen::Vector3d P1 = p0 + h*(u*std::cos(phi1) + v*std::sin(phi1));
+    const Eigen::Vector3d P2 = p0 + h*(u*std::cos(phi2) + v*std::sin(phi2));
+    
+    auto validate = [&](const Eigen::Vector3d& p) {
+        return std::abs((p - A).norm() - rA) < 1e-3 &&
+               std::abs((p - B).norm() - rB) < 1e-3 &&
+               std::abs((p - C).norm() - rC) < 1e-3;
+    };
+    
+    if (validate(P1)) return P1;
+    if (validate(P2)) return P2;
+    
+    return (P1 - ref_pos).squaredNorm() < (P2 - ref_pos).squaredNorm() ? P1 : P2;
+}
+
+Eigen::Vector3d RobotDynamics::forwardKinematics(
+    const Eigen::Vector3d& theta,
+    const Eigen::Vector3d& ref_pos) const 
+{
+    // Normalize angles to [-π, π] using atan2(sin, cos)
+    auto normalize_angle = [](double angle) -> double {
+        return atan2(sin(angle), cos(angle));
+    };
+
+    double adjusted_th1 = normalize_angle(theta(0));
+    double adjusted_th2 = normalize_angle(theta(1));
+    double adjusted_th3 = normalize_angle(theta(2));
+
+    // Compute S joint positions
+    Eigen::Vector3d s1(
+        params_.a1x + params_.l_11 * cos(adjusted_th1),
+        params_.a1y + params_.l_11 * sin(adjusted_th1),
+        params_.h_1
+    );
+    
+    Eigen::Vector3d s2(
+        params_.a2x + params_.l_21 * cos(adjusted_th2),
+        params_.a2y + params_.l_21 * sin(adjusted_th2),
+        params_.h_2
+    );
+    
+    Eigen::Vector3d s3(
+        params_.a3x + params_.l_31 * cos(adjusted_th3),
+        params_.a3y,
+        params_.h_3 + params_.l_31 * sin(adjusted_th3)
+    );
+    
+    // Compute constraint points (C_i)
+    const Eigen::Vector3d c1(s1.x(), s1.y(), s1.z() - (params_.d - params_.v_1));
+    const Eigen::Vector3d c2(s2.x(), s2.y(), s2.z() - (params_.d - params_.v_2));
+    const Eigen::Vector3d c3(s3.x(), s3.y(), s3.z() - (params_.d - params_.v_3));
+    const double r1 = params_.l_12;
+    const double r2 = params_.l_22;
+    const double r3 = params_.l_32;
+
+    // Helper function to validate solution against all spheres
+    auto validate_solution = [&](const Eigen::Vector3d& p, double tolerance = 1e-2) {
+        return std::abs((p - c1).norm() - r1) < tolerance &&
+               std::abs((p - c2).norm() - r2) < tolerance &&
+               std::abs((p - c3).norm() - r3) < tolerance;
+    };
+
+    // Set reference point A = c1
+    const Eigen::Vector3d& A = c1;
+    const Eigen::Vector3d& B = c2;
+    const Eigen::Vector3d& C = c3;
+    const double rA = r1;
+    const double rB = r2;
+    const double rC = r3;
+
+    // Two-plane method for trilateration
+    Eigen::Vector3d v1 = B - A;
+    Eigen::Vector3d v2 = C - A;
+    
+    // Compute constants for plane equations
+    const double d1 = rB*rB - rA*rA + A.squaredNorm() - B.squaredNorm();
+    const double d2 = rC*rC - rA*rA + A.squaredNorm() - C.squaredNorm();
+    
+    // Normal vector to the two planes
+    Eigen::Vector3d n = v1.cross(v2);
+    const double epsilon = 1e-8;
+    Eigen::Matrix<double, 2, 3> M;
+    M.row(0) = v1.transpose();
+    M.row(1) = v2.transpose();
+    Eigen::Vector2d d_vec(d1/2, d2/2);
+    
+    // Find particular solution using pseudoinverse
+    Eigen::Matrix2d MMt = M * M.transpose();
+    if (std::abs(MMt.determinant()) < epsilon) {
+        //std::cerr << "FK Warning: Singular MMt matrix\n";
+        return ref_pos;
+    }
+    
+    Eigen::Matrix2d MMt_inv = MMt.inverse();
+    Eigen::Vector3d P0 = M.transpose() * MMt_inv * d_vec;
+    
+    // Solve quadratic for line parameter
+    Eigen::Vector3d P0_minus_A = P0 - A;
+    const double a_coeff = n.squaredNorm();
+    const double b_coeff = 2 * P0_minus_A.dot(n);
+    const double c_coeff = P0_minus_A.squaredNorm() - rA*rA;
+    const double discriminant = b_coeff*b_coeff - 4*a_coeff*c_coeff;
+    
+    if (n.norm() < epsilon || discriminant < 0) {
+        if (discriminant < 0) {
+            //std::cerr << "FK Warning: Negative discriminant - ";
+        }
+        //std::cerr << "Using circle-sphere fallback\n";
+        return circleSphereIntersection(A, B, C, rA, rB, rC, ref_pos);
+    }
+    
+    const double t1 = (-b_coeff + std::sqrt(discriminant)) / (2*a_coeff);
+    const double t2 = (-b_coeff - std::sqrt(discriminant)) / (2*a_coeff);
+    
+    const Eigen::Vector3d P1 = P0 + t1 * n;
+    const Eigen::Vector3d P2 = P0 + t2 * n;
+    
+    // Validate solutions and select best
+    const bool valid1 = validate_solution(P1);
+    const bool valid2 = validate_solution(P2);
+    
+    if (valid1 && valid2) {
+        return (P1 - ref_pos).squaredNorm() < (P2 - ref_pos).squaredNorm() ? P1 : P2;
+    }
+    if (valid1) return P1;
+    if (valid2) return P2;
+
+    Eigen::Matrix3d J = computeJ(ref_pos, theta);
+    Eigen::Matrix3d K = computeK(ref_pos, theta);
+    
+    Eigen::Vector3d delta_theta = theta - last_theta_;
+    Eigen::Vector3d estimated_pos = ref_pos + dampedPseudoInverse(J) * K * delta_theta;
+    
+    // Use this estimate if it validates reasonably well
+    if (validate_solution(estimated_pos, 1e-2)) {
+        last_theta_ = theta;
+        return estimated_pos;
+    }
+    
+    // Final fallback: use reference position but log error
+    std::cerr << "FK Error: Using fallback position at theta: " 
+              << theta.transpose() << "\n";
+    last_theta_ = theta;
+    return estimated_pos;
+
 }

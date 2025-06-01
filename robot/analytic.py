@@ -255,7 +255,7 @@ class Plot_velo_accel(QWidget):
     def compute_inv_dynamics(self, h_1, h_2, h_3, l_11, l_21, l_31, m_11, m_21, m_31, m_12, m_22, m_32, m_d, l_arm_proth):
         p_0, phi_arc, theta_arc, p, vec_elbow, vec_shoulder, \
         theta_1bis, theta_1, theta_2bis, theta_2, theta_3bis, theta_3, d, v_1, v_2, v_3, m_1_point, m_2_point, m_3_point, z_vec, N_per_decideg = Compute_kine_traj(
-            self.x_0, self.y_0, self.z_0, self.theta, self.phi, False, True)
+            self.x_0, self.y_0, self.z_0, self.theta, self.phi, False, True, True)
         # /!\ m_1, m_2, m_3 from Compute_kine_traj = Points/vectors not masses/!\
 
         p_dot, p_dotdot, t = Cart_velocity_ramp(l_arm_proth, self.theta, self.phi, theta_arc, phi_arc,
@@ -303,6 +303,8 @@ class Plot_velo_accel(QWidget):
                                                   theta_2p, theta_3p,
                                                   x_pp, y_pp, z_pp, theta_1pp, theta_2pp, theta_3pp,
                                                   l_arm_proth)
+
+        print(theta_1[0], theta_1bis[0], theta_2[0], theta_2bis[0], theta_3[0], theta_3bis[0])
 
         return theta_1p, theta_2p, theta_3p, theta_1pp, theta_2pp, theta_3pp, t, tau_1, tau_2, tau_3
 
