@@ -24,9 +24,9 @@ void RobotDynamics::setParameters(const RobotParams& params) {
 
 Eigen::Matrix3d RobotDynamics::computeK(const Eigen::Vector3d& pos, 
                                         const Eigen::Vector3d& theta) const {
-    if (!initialized_) {
-        throw std::runtime_error("RobotDynamics not initialized");
-    }
+
+    if (!initialized_) std::cerr<<"Not initialized"<<std::endl;
+
     
     double x = pos(0), y = pos(1), z = pos(2);
     double th1 = theta(0), th2 = theta(1), th3 = theta(2);
@@ -53,9 +53,9 @@ Eigen::Matrix3d RobotDynamics::computeK(const Eigen::Vector3d& pos,
 
 Eigen::Matrix3d RobotDynamics::computeJ(const Eigen::Vector3d& pos, 
                                         const Eigen::Vector3d& theta) const {
-    if (!initialized_) {
-        throw std::runtime_error("RobotDynamics not initialized");
-    }
+
+    if (!initialized_) std::cerr<<"Not initialized"<<std::endl;
+
     
     double x = pos(0), y = pos(1), z = pos(2);
     double th1 = theta(0), th2 = theta(1), th3 = theta(2);
@@ -145,9 +145,8 @@ Eigen::Matrix3d RobotDynamics::computeJDot(const Eigen::Vector3d& vel,
 Eigen::Vector3d RobotDynamics::computeMotorSpeed(const Eigen::Vector3d& pos,
                                                 const Eigen::Vector3d& vel,
                                                 const Eigen::Vector3d& theta) const {
-    if (!initialized_) {
-        throw std::runtime_error("RobotDynamics not initialized");
-    }
+    if (!initialized_) std::cerr<<"Not initialized"<<std::endl;
+
     
     Eigen::Matrix3d K = computeK(pos, theta);
     Eigen::Matrix3d J = computeJ(pos, theta);
@@ -162,9 +161,8 @@ Eigen::Vector3d RobotDynamics::computeMotorAccel(const Eigen::Vector3d& pos,
                                                 const Eigen::Vector3d& accel,
                                                 const Eigen::Vector3d& theta,
                                                 const Eigen::Vector3d& theta_dot) const {
-    if (!initialized_) {
-        throw std::runtime_error("RobotDynamics not initialized");
-    }
+    if (!initialized_) std::cerr<<"Not initialized"<<std::endl;
+
     
     Eigen::Matrix3d J = computeJ(pos, theta);
     Eigen::Matrix3d J_dot = computeJDot(vel, theta, theta_dot);
@@ -225,9 +223,8 @@ Eigen::Vector3d RobotDynamics::computeForwardDynamics(
     const Eigen::Vector3d& pos,
     const Eigen::Vector3d& vel
 ) const {
-    if (!initialized_) {
-        throw std::runtime_error("RobotDynamics not initialized");
-    }
+    if (!initialized_) std::cerr<<"Not initialized"<<std::endl;
+
 
     // Compute dynamics terms
     Eigen::Matrix3d M = computeMassMatrix(theta, pos);
@@ -269,10 +266,8 @@ RobotDynamics::DynamicsResult RobotDynamics::computeInverseDynamics(
     DynamicsResult result;
     result.success = false;
     
-    if (!initialized_) {
-        result.error_msg = "RobotDynamics not initialized";
-        return result;
-    }
+    if (!initialized_) std::cerr<<"Not initialized"<<std::endl;
+
     
     try {
         result.theta_dot = computeMotorSpeed(pos, vel, theta);
@@ -281,7 +276,7 @@ RobotDynamics::DynamicsResult RobotDynamics::computeInverseDynamics(
         result.success = true;
     }
     catch (const std::exception& e) {
-        result.error_msg = std::string("Computation error: ") + e.what();
+        std::cerr<<"Computation error: "<<e.what();
     }
     
     return result;
@@ -327,10 +322,17 @@ RobotDynamics::IKSolution RobotDynamics::invKineSinglePoint(
     const Eigen::Vector3d& theta_prev) const 
 {
     using namespace std;
-    if (!initialized_) throw runtime_error("RobotDynamics not initialized");
+    if (!initialized_) {
+        IKSolution result;
+        result.theta = theta_prev;
+        result.valid = false;
+        return result;
+    }
     
     constexpr double PI = 3.14159265358979323846;
-    constexpr double JOINT_LIMIT = PI - 0.1;  // Symmetric limit for all joints
+    constexpr double JOINT_LIMIT = PI - 0.1;
+    constexpr size_t MAX_SOLUTIONS_PER_LEG = 2;
+    constexpr size_t MAX_CANDIDATES = 8;  // 2^3 legs
 
     // Geometric parameters
     const double d = params_.d;
@@ -371,48 +373,53 @@ RobotDynamics::IKSolution RobotDynamics::invKineSinglePoint(
     const double C3 = computeC(a3, b3, l31, l32);
 
     // Solve for t parameters
-    auto solveLeg = [](double A, double B, double C, int leg_num) -> vector<double> {
-        vector<double> solutions;
+    auto solveLeg = [](double A, double B, double C, int leg_num, double solutions[MAX_SOLUTIONS_PER_LEG]) -> size_t {
         const double denom = A + C;
+        size_t solution_count = 0;
         
         if (fabs(denom) < 1e-8) {
-            cerr << "Leg " << leg_num << ": Singular denominator (A+C ≈ 0)\n";
-            return solutions;
+            return 0;
         }
         
         const double discriminant = B*B - (A + C)*(C - A);
         if (discriminant < 0) {
-            return solutions;
+            return 0;
         }
 
         const double sqrt_disc = sqrt(discriminant);
-        solutions.push_back((B + sqrt_disc) / denom);
-        solutions.push_back((B - sqrt_disc) / denom);
-        return solutions;
+        solutions[solution_count++] = (B + sqrt_disc) / denom;
+        if (fabs(sqrt_disc) > 1e-8) {
+            solutions[solution_count++] = (B - sqrt_disc) / denom;
+        }
+        return solution_count;
     };
 
-    // Get all possible t solutions
-    vector<double> t1 = solveLeg(A1, B1, C1, 1);
-    vector<double> t2 = solveLeg(A2, B2, C2, 2);
-    vector<double> t3 = solveLeg(A3, B3, C3, 3);
+    // Get all possible t solutions using fixed arrays
+    double t1_sol[MAX_SOLUTIONS_PER_LEG];
+    size_t t1_count = solveLeg(A1, B1, C1, 1, t1_sol);
+    
+    double t2_sol[MAX_SOLUTIONS_PER_LEG];
+    size_t t2_count = solveLeg(A2, B2, C2, 2, t2_sol);
+    
+    double t3_sol[MAX_SOLUTIONS_PER_LEG];
+    size_t t3_count = solveLeg(A3, B3, C3, 3, t3_sol);
 
-    // Prepare solution structures
+    // Prepare solution storage
     IKSolution best_solution;
     best_solution.valid = false;
     double min_joint_dist = numeric_limits<double>::max();
     double min_pos_error = numeric_limits<double>::max();
+    
+    Eigen::Vector3d candidates[MAX_CANDIDATES];
+    size_t candidate_count = 0;
 
     // Generate all candidate solutions
-    vector<Eigen::Vector3d> candidates;
-    
-    for (double t1_val : t1) {
-        for (double t2_val : t2) {
-            for (double t3_val : t3) {
-                double th1 = 2 * atan(t1_val);
-                double th2 = 2 * atan(t2_val);
-                double th3 = 2 * atan(t3_val);
-                
-                Eigen::Vector3d candidate(th1, th2, th3);
+    for (size_t i1 = 0; i1 < t1_count; i1++) {
+        for (size_t i2 = 0; i2 < t2_count; i2++) {
+            for (size_t i3 = 0; i3 < t3_count; i3++) {
+                double th1 = 2 * atan(t1_sol[i1]);
+                double th2 = 2 * atan(t2_sol[i2]);
+                double th3 = 2 * atan(t3_sol[i3]);
                 
                 // Check symmetric joint limits
                 bool limits_ok = (th1 >= -JOINT_LIMIT && th1 <= JOINT_LIMIT) &&
@@ -420,22 +427,26 @@ RobotDynamics::IKSolution RobotDynamics::invKineSinglePoint(
                                  (th3 >= -JOINT_LIMIT && th3 <= JOINT_LIMIT);
                 if (!limits_ok) continue;
                 
-                candidates.push_back(candidate);
+                // Store in fixed array
+                if (candidate_count < MAX_CANDIDATES) {
+                    candidates[candidate_count++] = Eigen::Vector3d(th1, th2, th3);
+                }
             }
         }
     }
     
     // If no solutions, use previous configuration
-    if (candidates.empty()) {
-        cerr << "No IK solutions for position: " << p.transpose() << "\n";
-        candidates.push_back(theta_prev);
+    if (candidate_count == 0) {
+        best_solution.theta = theta_prev;
+        best_solution.valid = true;
+        return best_solution;
     }
     
     // Configuration type detector
     auto get_config_type = [PI](const Eigen::Vector3d& theta) {
         Eigen::Vector3d config_type;
         for (int i = 0; i < 3; i++) {
-            double angle = std::fmod(theta(i) + 2*PI, 2*PI);
+            double angle = fmod(theta(i) + 2*PI, 2*PI);
             config_type(i) = (angle > PI) ? 1 : 0;
         }
         return config_type;
@@ -444,7 +455,9 @@ RobotDynamics::IKSolution RobotDynamics::invKineSinglePoint(
     Eigen::Vector3d prev_config_type = get_config_type(theta_prev);
 
     // Evaluate all candidate solutions
-    for (const auto& theta_candidate : candidates) {
+    for (size_t i = 0; i < candidate_count; i++) {
+        const Eigen::Vector3d& theta_candidate = candidates[i];
+        
         // Compute forward kinematics
         const Eigen::Vector3d p_fk = forwardKinematics(theta_candidate, p);
         const double pos_error = (p_fk - p).norm();
@@ -458,7 +471,7 @@ RobotDynamics::IKSolution RobotDynamics::invKineSinglePoint(
         // Configuration type matching
         Eigen::Vector3d candidate_config = get_config_type(theta_candidate);
         double config_match = (candidate_config - prev_config_type).norm();
-        double config_score = 1.0 - std::min(config_match, 1.0);
+        double config_score = 1.0 - min(config_match, 1.0);
         
         // Combined selection metric
         double selection_metric = 0.8*joint_dist - 0.2*config_score;
@@ -472,20 +485,18 @@ RobotDynamics::IKSolution RobotDynamics::invKineSinglePoint(
         }
     }
 
-    // Final validation and diagnostics
+    // Final validation
     if (best_solution.valid) {
         const Eigen::Vector3d p_fk = forwardKinematics(best_solution.theta, p);
         const double final_error = (p_fk - p).norm();
         
         if (final_error > 5e-3) {
-            cerr << "Large FK error: " << final_error 
-                 << " at " << p.transpose() 
-                 << "\nIK solution: " << best_solution.theta.transpose()
-                 << "\nFK position: " << p_fk.transpose() << "\n";
+            best_solution.valid = false;
         }
-    } else {
-        cerr << "IK failed for position: " << p.transpose() 
-             << " - Using previous joint angles\n";
+    }
+
+    // Fallback to previous configuration if no valid solution
+    if (!best_solution.valid) {
         best_solution.theta = theta_prev;
         best_solution.valid = true;
     }

@@ -95,7 +95,6 @@ public:
         Eigen::Vector3d theta_ddot;
         Eigen::Vector3d torque;
         bool success;
-        std::string error_msg;
     };
     
     DynamicsResult computeInverseDynamics(const Eigen::Vector3d& pos,

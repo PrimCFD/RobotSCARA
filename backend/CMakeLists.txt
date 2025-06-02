@@ -42,6 +42,7 @@ set(LOCAL_INCLUDES
 # Main executable
 add_executable(backend
     src/main_server.cpp
+    src/Controller.cpp
     src/RobotModel.cpp
     src/SIL.cpp
 )

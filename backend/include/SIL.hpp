@@ -2,6 +2,7 @@
 #pragma once
 #include <vector>
 #include <Eigen/Dense>
+#include "Controller.hpp"
 
 constexpr size_t MAX_TRAJECTORY_POINTS = 50000;
 constexpr size_t MAX_FRAME_POINTS = 1000000;
@@ -23,13 +24,6 @@ struct Frame {
     double tau[3];
 };
 #pragma pack(pop)
-
-struct TrajectoryPoint {
-    double t;
-    Eigen::Vector3d x;        // Position
-    Eigen::Vector3d x_dot;    // Velocity
-    Eigen::Vector3d x_ddot;   // Acceleration
-};
 
 using Trajectory = std::vector<Waypoint>;
 
