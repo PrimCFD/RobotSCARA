@@ -1,0 +1,888 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.14">
+    
+    
+      
+        <title>Kinematic and Dynamic Model of a Simplified 3-DOF SPARA Robot - SCARA Robot Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.342714a4.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#kinematic-and-dynamic-model-of-a-simplified-3-dof-spara-robot" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="SCARA Robot Docs" class="md-header__button md-logo" aria-label="SCARA Robot Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SCARA Robot Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Kinematic and Dynamic Model of a Simplified 3-DOF SPARA Robot
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../docs/control.md" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Control Architecture
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../docs/kindyn.md" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Kinematics & Dynamics
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="SCARA Robot Docs" class="md-nav__button md-logo" aria-label="SCARA Robot Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    SCARA Robot Docs
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../docs/control.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Control Architecture
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../docs/kindyn.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Kinematics & Dynamics
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-kinematics" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Kinematics
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Kinematics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Structure
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#simplified-jacobian-matrices" class="md-nav__link">
+    <span class="md-ellipsis">
+      Simplified Jacobian Matrices
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#singularities" class="md-nav__link">
+    <span class="md-ellipsis">
+      Singularities
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inverse-kinematics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Inverse Kinematics
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#joint-angle-expressions-theta_i" class="md-nav__link">
+    <span class="md-ellipsis">
+      Joint Angle Expressions $( \theta_i )$
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      Workspace
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#translational-workspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      Translational Workspace
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#velocity-equations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Velocity Equations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#angular-velocity-dottheta_i" class="md-nav__link">
+    <span class="md-ellipsis">
+      Angular Velocity $\dot{\theta}_i$
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-dynamics" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Dynamics
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Dynamics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#abstract" class="md-nav__link">
+    <span class="md-ellipsis">
+      Abstract
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#equivalent-point-mass-epm-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      Equivalent Point Mass (EPM) Method
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Equivalent Point Mass (EPM) Method">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-concept" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core Concept
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mass-assignment-strategies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Mass Assignment Strategies
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mass Assignment Strategies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fixed-mass-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fixed Mass Method:
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#variable-mass-method-higher-accuracy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Variable Mass Method (higher accuracy):
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dynamic-model-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dynamic Model Implementation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Dynamic Model Implementation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#energy-formulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Energy Formulation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#actuator-torques" class="md-nav__link">
+    <span class="md-ellipsis">
+      Actuator Torques
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#advantages-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advantages &amp; Limitations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advantages &amp; Limitations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#advantages" class="md-nav__link">
+    <span class="md-ellipsis">
+      ✔️ Advantages
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      ❌ Limitations
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance Comparison
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#conclusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Conclusion
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="kinematic-and-dynamic-model-of-a-simplified-3-dof-spara-robot">Kinematic and Dynamic Model of a Simplified 3-DOF SPARA Robot</h1>
+<h2 id="1-kinematics">1. Kinematics</h2>
+<h3 id="structure">Structure</h3>
+<ul>
+<li><strong>Degrees of Freedom</strong>: Pure translational motion (x, y, z).    </li>
+<li><strong>Actuators</strong>: 3 legs (Legs 1–3), with redundancy and rotational DOFs removed.    </li>
+<li><strong>Key Changes from Original 4+1 DOF Design</strong>:    </li>
+<li>Suppressed redundant parameter <code>γ</code> (Leg 5 replaced by 3).    </li>
+<li>Eliminated rotational DOF <code>φ</code> (double parallelogram linkages removed).    </li>
+</ul>
+<h3 id="simplified-jacobian-matrices">Simplified Jacobian Matrices</h3>
+<p>Relate joint velocities to Cartesian velocities:  <br />
+$$<br />
+\mathbf{J} \dot{\mathbf{c}} = \mathbf{K} \dot{\boldsymbol{\theta}}<br />
+$$<br />
+- <strong>Variables</strong>:  <br />
+  - $\dot{\mathbf{c}} = [\dot{x}, \dot{y}, \dot{z}]^T$: End-effector translational velocities.  <br />
+  - $\dot{\boldsymbol{\theta}} = [\dot{\theta}_1, \dot{\theta}_2, \dot{\theta}_3]^T$: Joint angular velocities.    </p>
+<h3 id="singularities">Singularities</h3>
+<ul>
+<li><strong>Type I (Inverse Kinematics)</strong>: Occurs when legs are fully extended/folded.    </li>
+<li><strong>Type II (Forward Kinematics)</strong>: Eliminated due to removed rotational constraints.    </li>
+</ul>
+<hr />
+<h3 id="inverse-kinematics">Inverse Kinematics</h3>
+<h3 id="joint-angle-expressions-theta_i">Joint Angle Expressions $( \theta_i )$</h3>
+<p>For legs $i = 1, 2, 3$:  <br />
+$$<br />
+\theta_i = 2 \arctan\left( \frac{B_i \pm \sqrt{B_i^2 - (A_i + C_i)(C_i - A_i)}}{A_i + C_i} \right)<br />
+$$  <br />
+<strong>Geometric Parameters</strong>:  <br />
+For legs $i = 1, 2$:
+$$<br />
+\begin{align<em>}<br />
+A_i &amp;= 2(a_{iy} - b_{iy}) \<br />
+B_i &amp;= 2(b_{ix} - a_{ix}) \<br />
+C_i &amp;= \frac{\ell_{i2}^2 - \ell_{i1}^2 - (a_i - b_i)^T (a_i - b_i)}{\ell_{i1}}<br />
+\end{align</em>}<br />
+$$ <br />
+For leg $i = 3$:
+$$<br />
+\begin{align<em>}<br />
+A_i &amp;= 2(a_{iz} - b_{iz}) \<br />
+B_i &amp;= 2(b_{ix} - a_{ix}) \<br />
+C_i &amp;= \frac{\ell_{i2}^2 - \ell_{i1}^2 - (a_i - b_i)^T (a_i - b_i)}{\ell_{i1}}<br />
+\end{align</em>}<br />
+$$<br />
+<strong>Variables</strong>:  <br />
+- $a_i$ : Base joint position of leg $i$.  <br />
+- $b_i$ : Distal joint position of leg $i$.  <br />
+- $\ell_{i1}, \ell_{i2}$: Proximal/distal link lengths.    </p>
+<hr />
+<h3 id="workspace">Workspace</h3>
+<h3 id="translational-workspace">Translational Workspace</h3>
+<ul>
+<li><strong>Dimensions</strong>: ~0.5m × 1.0m × 0.3m (x, y, z).    </li>
+<li><strong>Limits</strong>:    </li>
+<li>Determined by leg lengths ($\ell_{i1}, \ell_{i2}$).    </li>
+<li>Constrained by joint ranges (Fig. 10 in the paper).    </li>
+</ul>
+<h3 id="performance">Performance</h3>
+<ul>
+<li><strong>Speed</strong>: Up to 3.5 m/s. </li>
+</ul>
+<hr />
+<h3 id="velocity-equations">Velocity Equations</h3>
+<h3 id="angular-velocity-dottheta_i">Angular Velocity $\dot{\theta}_i$</h3>
+<p>Derived from Jacobian matrices:  <br />
+$$<br />
+\dot{\boldsymbol{\theta}} = \mathbf{K}^{-1} \mathbf{J} \dot{\mathbf{c}}<br />
+$$    </p>
+<hr />
+<ul>
+<li>Original Paper:  <br />
+<strong>L. -T. Schreiber and C. Gosselin</strong>, "Schönflies Motion PARAllel Robot (SPARA): A Kinematically Redundant Parallel Robot With Unlimited Rotation Capabilities," in <em>IEEE/ASME Transactions on Mechatronics</em>, 2019.  <br />
+<strong>DOI</strong>: <a href="https://doi.org/10.1109/TMECH.2019.2929646">10.1109/TMECH.2019.2929646</a>.</li>
+</ul>
+<h2 id="2-dynamics">2. Dynamics</h2>
+<h3 id="abstract">Abstract</h3>
+<p>This simulation uses the <strong>Equivalent Point Mass (EPM)</strong> method — a simplified approach for dynamic modeling of parallel robots. The method replaces distal links with dynamically equivalent point masses at their endpoints, eliminating complex angular velocity calculations. Derived from Lagrangian mechanics, this technique is <strong>computationally efficient</strong> while maintaining <strong>good accuracy for slender links</strong>.</p>
+<hr />
+<h3 id="equivalent-point-mass-epm-method">Equivalent Point Mass (EPM) Method</h3>
+<h4 id="core-concept">Core Concept</h4>
+<p>The EPM method simplifies dynamics by:</p>
+<ul>
+<li>Replacing distal links with point masses at their endpoints (Bᵢ and Cᵢ)  </li>
+<li>Assigning masses based on energy equivalence principles  </li>
+<li>Handling potential and kinetic energy separately  </li>
+</ul>
+<hr />
+<h4 id="mass-assignment-strategies">Mass Assignment Strategies</h4>
+<p><strong>For Potential Energy (exact equivalence):</strong></p>
+<p>$$
+m_{p1} = \frac{m l_2}{l_1 + l_2}, \quad 
+m_{p2} = \frac{m l_1}{l_1 + l_2}
+$$</p>
+<p>Where ( l_1, l_2 ) are distances from the center of mass to the endpoints.<br />
+For symmetric links:</p>
+<p>$$
+m_{p1} = m_{p2} = \frac{m}{2}
+$$</p>
+<hr />
+<p><strong>For Kinetic Energy (approximate equivalence):</strong></p>
+<h5 id="fixed-mass-method">Fixed Mass Method:</h5>
+<ul>
+<li>( m_{k1} = m_{k2} = \frac{m}{2} ) (simple but less accurate)  </li>
+<li>or ( m_{k1} = \frac{m}{3}, \quad m_{k2} = \frac{2m}{3} ) (better for rotational inertia)</li>
+</ul>
+<h5 id="variable-mass-method-higher-accuracy">Variable Mass Method (higher accuracy):</h5>
+<p>$$
+\begin{align<em>}
+m_{k1} &amp;= \frac{m}{3}(1 + k_1) \
+m_{k2} &amp;= \frac{m}{3}(1 + k_2)
+\end{align</em>}
+$$</p>
+<p>With ( k )-coefficients calculated via minimum-norm solution:</p>
+<p>$$
+k_1 = \frac{|\mathbf{v}_1|^2}{|\mathbf{v}_1|^4 + |\mathbf{v}_2|^4} \mathbf{v}_1^T \mathbf{v}_2, \quad
+k_2 = \frac{|\mathbf{v}_2|^2}{|\mathbf{v}_1|^4 + |\mathbf{v}_2|^4} \mathbf{v}_1^T \mathbf{v}_2
+$$</p>
+<hr />
+<h3 id="dynamic-model-implementation">Dynamic Model Implementation</h3>
+<h4 id="energy-formulation">Energy Formulation</h4>
+<p>Kinetic energy for distal links simplifies to:</p>
+<p>$$
+T_{\text{EPM}} = \frac{1}{2} (m_{k1} \mathbf{v}<em>1^T \mathbf{v}_1 + m</em>{k2} \mathbf{v}_2^T \mathbf{v}_2)
+$$</p>
+<hr />
+<h4 id="actuator-torques">Actuator Torques</h4>
+<p>Total torque combines contributions from:</p>
+<p><strong>Proximal links (joint space):</strong></p>
+<p>$$
+\boldsymbol{\tau}_a = \frac{d}{dt}\left( \frac{\partial T}{\partial \dot{\boldsymbol{\theta}}} \right) - \frac{\partial T}{\partial \boldsymbol{\theta}} + \frac{\partial V}{\partial \boldsymbol{\theta}}
+$$</p>
+<p><strong>Platform + distal points (Cartesian space):</strong></p>
+<p>$$
+\mathbf{f} = \frac{d}{dt}\left( \frac{\partial T}{\partial \dot{\mathbf{p}}} \right) - \frac{\partial T}{\partial \mathbf{p}} + \frac{\partial V}{\partial \mathbf{p}}
+$$</p>
+<p><strong>Total actuator torque:</strong></p>
+<p>$$
+\boldsymbol{\tau} = \boldsymbol{\tau}_a + (\mathbf{J}^{-1}\mathbf{K})^T \mathbf{f}
+$$</p>
+<hr />
+<h3 id="advantages-limitations">Advantages &amp; Limitations</h3>
+<h4 id="advantages">✔️ Advantages</h4>
+<ul>
+<li>Eliminates complex angular velocity calculations  </li>
+<li>Reduces computational cost by 30–60% vs exact models  </li>
+<li>Maintains &gt;95% accuracy for slender links  </li>
+<li>Fixed mass method enables real-time control  </li>
+<li>Variable mass improves accuracy for known trajectories  </li>
+</ul>
+<h4 id="limitations">❌ Limitations</h4>
+<ul>
+<li>Accuracy decreases for thick/rotating links  </li>
+<li>Fixed masses: limited accuracy across configurations  </li>
+<li>Variable masses: requires known trajectories  </li>
+<li>Potential energy: exact only when COM lies on link axis  </li>
+</ul>
+<hr />
+<h3 id="performance-comparison">Performance Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Comp. Cost</th>
+<th>Torque RMSE</th>
+<th>Best For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fixed Mass EPM</td>
+<td>Lowest</td>
+<td>5–6 Nmm</td>
+<td>Real-time control</td>
+</tr>
+<tr>
+<td>Variable Mass</td>
+<td>Medium</td>
+<td>2–3 Nmm</td>
+<td>Known trajectories</td>
+</tr>
+<tr>
+<td>Slender Link*</td>
+<td>High</td>
+<td>0.4 Nmm</td>
+<td>General-purpose</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>* Reference method from original paper</p>
+</blockquote>
+<hr />
+<h3 id="conclusion">Conclusion</h3>
+<p>The EPM method provides an effective balance between <strong>accuracy</strong> and <strong>computational efficiency</strong>. For <strong>real-time control</strong>, fixed masses (( m/2 ) or ( m/3 + 2m/3 )) are recommended. For <strong>trajectory-based tasks</strong>, variable masses offer superior accuracy with moderate computation overhead.</p>
+<hr />
+<ul>
+<li>Original Paper: 
+  Zhou Z., Gosselin C. (2024) <em>Simplified Inverse Dynamic Models of Parallel Robots Based on Lagrangian Approach</em>.<br />
+<strong>Meccanica</strong>, 59:657–680. DOI: <a href="https://doi.org/10.1007/s11012-024-01782-6">10.1007/s11012-024-01782-6</a></li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.tabs", "content.code.copy", "navigation.sections"], "search": "../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.13a4f30d.min.js"></script>
+      
+    
+  </body>
+</html>
