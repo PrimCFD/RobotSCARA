@@ -9,7 +9,7 @@ from robot.dynamics import Plot_velo_accel
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtGui import QDoubleValidator, QIcon
 from PyQt5.QtWidgets import QPushButton, QStyle
-from robot.misc import constants, Cart_velocity_ramp, Cartesian_to_spherical, set_config, save_config, load_config, parse_simulation_result
+from robot.misc import constants, Cart_velocity_ramp, Cartesian_to_spherical, set_config, save_config, load_config, parse_simulation_result, Spherical_to_cartesian
 from scipy.spatial import ConvexHull, Delaunay
 from scipy.interpolate import interp1d
 from skimage import measure
@@ -244,13 +244,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.resolution = resolution
         self.fps = fps
 
-        # Origin position
-        self.x_0 = 0.15  # m
-        self.y_0 = 0.00  # m
-        self.z_0 = 0.20  # m
-
-        self.p_0 = np.array([self.x_0, self.y_0, self.z_0])
-
         # Workspace
         self.xlim = (-0.5, 0.5)
         self.ylim = (-0.5, 0.5)
@@ -279,6 +272,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.d, self.v_1, self.v_2, self.v_3, self.h_1, self.h_2, self.h_3, self.l_11, self.l_21, self.l_31, self.l_12, self.l_22, self.l_32, self.vec_elbow, self.vec_shoulder, self.l_arm_proth, self.l_humerus, \
         self.m_1, self.m_2, self.m_3, self.m_d = constants()
+
+        # Origin position
+        r, theta, phi = Cartesian_to_spherical(0.15, 0.0, 0.2, self.vec_elbow, 1)
+        self.theta_0 = theta # rad
+        self.phi_0 = phi # rad
+        self.x_0, self.y_0, self.z_0 = Spherical_to_cartesian(self.l_arm_proth, self.theta_0, self.phi_0, self.vec_elbow)
+
+        self.p_0 = np.array([self.x_0, self.y_0, self.z_0])
 
         # Speed ramp
         self.omega_max = 5 * np.pi / 180  # rad.s^-1

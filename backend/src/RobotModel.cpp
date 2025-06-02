@@ -22,6 +22,12 @@ void RobotDynamics::setParameters(const RobotParams& params) {
     initialized_ = true;
 }
 
+void RobotDynamics::setElbowArm(const Eigen::Vector3d& elbow, 
+                                      double l_arm_proth) {
+    params_.vec_elbow = elbow;
+    params_.l_arm_proth = l_arm_proth;
+}
+
 Eigen::Matrix3d RobotDynamics::computeK(const Eigen::Vector3d& pos, 
                                         const Eigen::Vector3d& theta) const {
 

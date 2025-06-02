@@ -10,11 +10,14 @@
 void run_sil_simulation(
     const std::vector<Waypoint>& binary_traj,
     std::vector<Frame>& results_out,
-    std::vector<IdealTorquePoint>& ideal_torques_out)
+    std::vector<IdealTorquePoint>& ideal_torques_out,
+    const Eigen::Vector3d& elbow_pos,
+    double l_arm_proth)
     {
 
     RobotDynamics robot_ideal;
     robot_ideal.loadHardcodedParams();
+    robot_ideal.setElbowArm(elbow_pos, l_arm_proth);
 
     // Pre-compute ideal torques
     ideal_torques_out.clear();
@@ -84,6 +87,7 @@ void run_sil_simulation(
 
     RobotDynamics robot;
     robot.loadHardcodedParams();
+    robot.setElbowArm(elbow_pos, l_arm_proth);
 
     // Create and configure controller
     Controller controller;

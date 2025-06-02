@@ -63,10 +63,7 @@ def constants(cfg=None):
     x_elbow, y_elbow, z_elbow = cfg["elbow"].values()
     vec_elbow = np.array([x_elbow, y_elbow, z_elbow])
 
-    x_0, y_0, z_0 = cfg["initial_pos"].values()
-    p_0 = np.array([x_0, y_0, z_0])
-
-    l_arm_proth = np.linalg.norm(p_0 - vec_elbow)
+    l_arm_proth = cfg["arm"]["l_arm_proth"]
 
     l_humerus = cfg["arm"]["l_humerus"]
     z_shoulder = cfg["shoulder"]["z"]

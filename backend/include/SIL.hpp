@@ -65,5 +65,6 @@ TrajectoryPoint interpolateTrajectory(const Trajectory& traj, double t_query);
 void run_sil_simulation(
     const std::vector<Waypoint>& binary_traj,
     std::vector<Frame>& results_out,
-    std::vector<IdealTorquePoint>& ideal_torques_out
-);
+    std::vector<IdealTorquePoint>& ideal_torques_out,
+    const Eigen::Vector3d& elbow_pos,
+    double l_arm_proth);

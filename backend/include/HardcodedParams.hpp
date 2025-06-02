@@ -34,10 +34,6 @@ inline void loadHardcodedParams(RobotDynamics::RobotParams& params) {
     params.m_arm = 2.5;
 
     // Position vectors
-    params.vec_elbow = Eigen::Vector3d(0.35, 0.35, 0.0);
     params.vec_shoulder = Eigen::Vector3d(0.5707940216581961, 0.5707940216581961, 0.25);
-    params.initial_pos = Eigen::Vector3d(0.15, 0.0, 0.2);
 
-    // Computed parameters
-    params.l_arm_proth = 0.45;
 }

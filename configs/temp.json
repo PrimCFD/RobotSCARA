@@ -27,15 +27,11 @@
     "elbow": {
         "x": 0.35,
         "y": 0.35,
-        "z": 0.0
-    },
-    "initial_pos": {
-        "x": 0.15,
-        "y": 0.0,
         "z": 0.2
     },
     "arm": {
-        "l_humerus": 0.4
+        "l_humerus": 0.4,
+        "l_arm_proth": 0.45
     },
     "shoulder": {
         "z": 0.25

@@ -38,6 +38,9 @@ public:
     void loadHardcodedParams();
     void setParameters(const RobotParams& params);
 
+    void setElbowArm(const Eigen::Vector3d& elbow, 
+                                      double l_arm_proth);
+                                      
     Eigen::Vector3d getInitialPosition() const {
     return params_.initial_pos;
     }

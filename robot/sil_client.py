@@ -1,6 +1,7 @@
 import socket
 import struct
 from typing import List, Dict
+from robot.misc import load_config
 
 
 def request_sil_simulation(trajectory: List[Dict]) -> List[Dict]:
@@ -17,9 +18,20 @@ def request_sil_simulation(trajectory: List[Dict]) -> List[Dict]:
     port = 5555
 
     with socket.create_connection((host, port)) as sock:
+
+        config = load_config()
+
+        # Extract parameters
+        elbow = config["elbow"]
+        l_arm_proth = config["arm"]["l_arm_proth"]
+
         # Build binary message
         n = len(trajectory)
         message = struct.pack('<i', n)
+        # Add elbow position and arm parameters
+        message += struct.pack('<3d', elbow['x'], elbow['y'], elbow['z'])
+        message += struct.pack('<1d', l_arm_proth)
+
         for wp in trajectory:
             message += struct.pack('<10d',
                                    wp['t'],

@@ -92,6 +92,15 @@ void handle_client(socket_t sock) {
             throw std::runtime_error("Waypoint count exceeds maximum limit");
         }
 
+        // Read elbow position and arm parameters (3+2 doubles)
+        double elbow_x, elbow_y, elbow_z, l_arm_proth;
+        if (!recv_all(sock, reinterpret_cast<char*>(&elbow_x), sizeof(double))) throw std::runtime_error("Failed to read Elbow x");
+        if (!recv_all(sock, reinterpret_cast<char*>(&elbow_y), sizeof(double))) throw std::runtime_error("Failed to read Elbow y");
+        if (!recv_all(sock, reinterpret_cast<char*>(&elbow_z), sizeof(double))) throw std::runtime_error("Failed to read Elbow z");
+        if (!recv_all(sock, reinterpret_cast<char*>(&l_arm_proth), sizeof(double))) throw std::runtime_error("Failed to read Elbow l_arm_proth");
+        
+        Eigen::Vector3d elbow_pos(elbow_x, elbow_y, elbow_z);
+
         // Read waypoints in chunks for large trajectories
         std::vector<Waypoint> trajectory;
         trajectory.reserve(n);
@@ -126,8 +135,8 @@ void handle_client(socket_t sock) {
         // Run simulation - now capturing ideal_torques
         std::cout << "Starting simulation for " << n << " waypoints..." << std::endl;
         std::vector<Frame> results;
-        std::vector<IdealTorquePoint> ideal_torques; // NEW: Store ideal torques
-        run_sil_simulation(trajectory, results, ideal_torques); // UPDATED: Pass ideal_torques
+        std::vector<IdealTorquePoint> ideal_torques;
+        run_sil_simulation(trajectory, results, ideal_torques, elbow_pos, l_arm_proth);
         std::cout << "Simulation completed with " << results.size() << " frames and "
                   << ideal_torques.size() << " ideal torque points" << std::endl;
 

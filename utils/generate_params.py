@@ -40,12 +40,8 @@ inline void loadHardcodedParams(RobotDynamics::RobotParams& params) {{
     params.m_arm = {m_arm};
 
     // Position vectors
-    params.vec_elbow = Eigen::Vector3d({elbow_x}, {elbow_y}, {elbow_z});
     params.vec_shoulder = Eigen::Vector3d({shoulder_x}, {shoulder_y}, {shoulder_z});
-    params.initial_pos = Eigen::Vector3d({init_x}, {init_y}, {init_z});
 
-    // Computed parameters
-    params.l_arm_proth = {l_arm_proth};
 }}"""
 
 
@@ -61,21 +57,9 @@ def main():
     # Extract parameters
     geom = config["geometry"]
     elbow = config["elbow"]
-    init_pos = config["initial_pos"]
     shoulder = config["shoulder"]
     arm = config["arm"]
     mass = config["mass"]
-
-    # Compute derived values
-    p0 = [init_pos["x"], init_pos["y"], init_pos["z"]]
-    elbow_vec = [elbow["x"], elbow["y"], elbow["z"]]
-
-    # Calculate l_arm_proth as Euclidean distance
-    l_arm_proth = math.sqrt(
-        (p0[0] - elbow_vec[0]) ** 2 +
-        (p0[1] - elbow_vec[1]) ** 2 +
-        (p0[2] - elbow_vec[2]) ** 2
-    )
 
     # Compute shoulder position using the same formula as misc.py
     l_humerus = arm["l_humerus"]
@@ -125,16 +109,9 @@ def main():
         m_32=mass["m_3"][1],
         m_d=mass["m_d_seul"],
         m_arm=mass["m_bras"],
-        elbow_x=elbow["x"],
-        elbow_y=elbow["y"],
-        elbow_z=elbow["z"],
         shoulder_x=shoulder_x,
         shoulder_y=shoulder_y,
-        shoulder_z=shoulder_z,
-        init_x=init_pos["x"],
-        init_y=init_pos["y"],
-        init_z=init_pos["z"],
-        l_arm_proth=l_arm_proth
+        shoulder_z=shoulder_z
     )
 
     # Write output file
