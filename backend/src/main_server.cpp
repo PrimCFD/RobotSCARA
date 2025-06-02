@@ -123,23 +123,29 @@ void handle_client(socket_t sock) {
                       << std::endl;
         }
 
-        // Run simulation
+        // Run simulation - now capturing ideal_torques
         std::cout << "Starting simulation for " << n << " waypoints..." << std::endl;
         std::vector<Frame> results;
-        run_sil_simulation(trajectory, results);
-        std::cout << "Simulation completed with " << results.size() << " frames" << std::endl;
+        std::vector<IdealTorquePoint> ideal_torques; // NEW: Store ideal torques
+        run_sil_simulation(trajectory, results, ideal_torques); // UPDATED: Pass ideal_torques
+        std::cout << "Simulation completed with " << results.size() << " frames and "
+                  << ideal_torques.size() << " ideal torque points" << std::endl;
 
         // Check frame count
         if (results.size() > MAX_FRAME_POINTS) {
             throw std::runtime_error("Frame count exceeds maximum limit");
         }
 
-        // Send results in chunks
+        // Send header: frame count (m) + ideal torque count (k)
         int32_t m = static_cast<int32_t>(results.size());
-        if (!send_all(sock, reinterpret_cast<const char*>(&m), sizeof(m))) {
-            throw std::runtime_error("Failed to send frame count");
+        int32_t k = static_cast<int32_t>(ideal_torques.size());
+        int32_t header[2] = {m, k}; // Combined header
+
+        if (!send_all(sock, reinterpret_cast<const char*>(header), sizeof(header))) {
+            throw std::runtime_error("Failed to send header");
         }
-        
+
+        // Send frames in chunks
         if (m > 0) {
             constexpr size_t FRAME_CHUNK_SIZE = 500;
             size_t frames_remaining = m;
@@ -151,8 +157,8 @@ void handle_client(socket_t sock) {
                 size_t offset = frames_sent;
                 
                 if (!send_all(sock, 
-                             reinterpret_cast<const char*>(results.data() + offset),
-                             chunk_bytes)) {
+                            reinterpret_cast<const char*>(results.data() + offset),
+                            chunk_bytes)) {
                     throw std::runtime_error("Incomplete frame data sent");
                 }
                 
@@ -161,8 +167,35 @@ void handle_client(socket_t sock) {
                 
                 // Progress reporting
                 std::cout << "Sent: " << frames_sent << "/" << m
-                          << " frames (" << (100 * frames_sent / m) << "%)"
-                          << std::endl;
+                        << " frames (" << (100 * frames_sent / m) << "%)"
+                        << std::endl;
+            }
+        }
+
+        // NEW: Send ideal torques in chunks
+        if (k > 0) {
+            constexpr size_t IDEAL_CHUNK_SIZE = 500;
+            size_t points_remaining = k;
+            size_t points_sent = 0;
+            
+            while (points_remaining > 0) {
+                size_t chunk_points = std::min(points_remaining, IDEAL_CHUNK_SIZE);
+                size_t chunk_bytes = chunk_points * sizeof(IdealTorquePoint);
+                size_t offset = points_sent;
+                
+                if (!send_all(sock, 
+                            reinterpret_cast<const char*>(ideal_torques.data() + offset),
+                            chunk_bytes)) {
+                    throw std::runtime_error("Incomplete ideal torque data sent");
+                }
+                
+                points_remaining -= chunk_points;
+                points_sent += chunk_points;
+                
+                // Progress reporting
+                std::cout << "Sent: " << points_sent << "/" << k
+                        << " ideal torques (" << (100 * points_sent / k) << "%)"
+                        << std::endl;
             }
         }
     } catch (const std::exception& e) {

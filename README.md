@@ -180,7 +180,7 @@ Upcoming features :
 >   - [*kindyn.md*](./docs/kindyn.md) / [*kindyn.html*](./docs/kindyn.html) &rarr; Theory / choices for kinematic/dynamic modeling
 > - **./robot/**
 >   - *\_\_init__.py*
->   - *analytic.py* &rarr; Dynamic modeling
+>   - *dynamics.py* &rarr; Dynamic modeling
 >   - *gui.py* &rarr; **PyQt** Main window 
 >   - *hil_client.py* &rarr; IPC Client for HIL
 >   - *kinematics.py* &rarr; Inverse Kinematics (IK)

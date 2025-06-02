@@ -29,11 +29,11 @@ def request_sil_simulation(trajectory: List[Dict]) -> List[Dict]:
                                    )
         sock.sendall(message)
 
-        # Read response header (number of frames)
-        header = sock.recv(4)
-        if len(header) != 4:
+        # Read new header (two 4-byte integers)
+        header = sock.recv(8)
+        if len(header) != 8:
             raise ConnectionError("Incomplete header")
-        m = struct.unpack('<i', header)[0]
+        m, k = struct.unpack('<ii', header)  # m=sim frames, k=ideal points
 
         # Read all frame data
         frame_data = b''
@@ -46,11 +46,11 @@ def request_sil_simulation(trajectory: List[Dict]) -> List[Dict]:
             remaining -= len(chunk)
 
         # Parse frames
-        frames = []
+        simulation_frames = []
         for i in range(m):
             start = i * 128
             values = struct.unpack_from('<16d', frame_data, start)
-            frames.append({
+            simulation_frames.append({
                 't': values[0],
                 'x': list(values[1:4]),
                 'x_dot': list(values[4:7]),
@@ -58,4 +58,27 @@ def request_sil_simulation(trajectory: List[Dict]) -> List[Dict]:
                 'theta_dot': list(values[10:13]),
                 'tau': list(values[13:16])
             })
-        return frames
+
+        # Read ideal data points (now including positions and velocities)
+        ideal_data = b''
+        remaining = k * 80  # 10 doubles * 8 bytes (t + 3 theta + 3 theta_dot + 3 tau)
+        while remaining > 0:
+            chunk = sock.recv(min(4096, remaining))
+            if not chunk:
+                raise ConnectionError("Incomplete ideal data")
+            ideal_data += chunk
+            remaining -= len(chunk)
+
+        # Parse ideal data points
+        ideal_points = []
+        for i in range(k):
+            start = i * 80
+            values = struct.unpack_from('<10d', ideal_data, start)
+            ideal_points.append({
+                't': values[0],
+                'theta': list(values[1:4]),
+                'theta_dot': list(values[4:7]),
+                'tau_ideal': list(values[7:10])
+            })
+
+        return [simulation_frames, ideal_points]

@@ -87,6 +87,10 @@ class SimulationLogger:
         self.simulation_buffer_path = buffer_dir / "buffer_simulation.csv"
         self.sim_hash_path = buffer_dir / "buffer_hash.txt"
 
+        self.ideal_data_path = buffer_dir / "buffer_ideal_data.csv"
+        self.ideal_data = None
+        self.empty_buffer_ideal = True
+
         self.sim_results = None
         self.sim_hash = None
         self.empty_buffer_simulation = True
@@ -105,6 +109,12 @@ class SimulationLogger:
         if not self.sim_hash_path.exists():
             with open(self.sim_hash_path, 'w') as f:
                 f.write("")
+
+        # Create ideal torques file if needed
+        if not self.ideal_data_path.exists():
+            with open(self.ideal_data_path, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(["t", "thetaideal0", "thetaideal1", "thetaideal2", "theta_dotideal0", "theta_dotideal1", "theta_dotideal2", "tau_ideal0", "tau_ideal1", "tau_ideal2"])
 
         self.load_cached_simulation()
 
@@ -183,7 +193,70 @@ class SimulationLogger:
     def needs_recompute(self, new_hash):
         return new_hash != self.sim_hash
 
+    def save_ideal_data(self, t, theta, theta_dot, tau_ideal):
+        """Save full ideal data (positions, velocities, torques)"""
+        self.ideal_data = {
+            't': t,
+            'theta': theta,
+            'theta_dot': theta_dot,
+            'tau_ideal': tau_ideal
+        }
 
+        try:
+            with open(self.ideal_data_path, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(["t", "theta_ideal0", "theta_ideal1", "theta_ideal2",
+                                 "theta_dot_ideal0", "theta_dot_ideal1", "theta_dot_ideal2",
+                                 "tau_ideal0", "tau_ideal1", "tau_ideal2"])
+
+                for i in range(len(t)):
+                    writer.writerow([
+                        t[i],
+                        *theta[i], *theta_dot[i], *tau_ideal[i]
+                    ])
+            self.empty_buffer_ideal = False
+        except Exception as e:
+            print(f"[Cache] Failed to save ideal data: {e}")
+            self.empty_buffer_ideal = True
+
+    def load_ideal_data(self):
+        """Load full ideal data (positions, velocities, torques)"""
+        try:
+            if not self.ideal_data_path.exists():
+                self.empty_buffer_ideal = True
+                return
+
+            self.ideal_data = {'t': [], 'theta': [], 'theta_dot': [], 'tau_ideal': []}
+
+            with open(self.ideal_data_path) as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    self.ideal_data['t'].append(float(row['t']))
+                    self.ideal_data['theta'].append([
+                        float(row['theta_ideal0']),
+                        float(row['theta_ideal1']),
+                        float(row['theta_ideal2'])
+                    ])
+                    self.ideal_data['theta_dot'].append([
+                        float(row['theta_dot_ideal0']),
+                        float(row['theta_dot_ideal1']),
+                        float(row['theta_dot_ideal2'])
+                    ])
+                    self.ideal_data['tau_ideal'].append([
+                        float(row['tau_ideal0']),
+                        float(row['tau_ideal1']),
+                        float(row['tau_ideal2'])
+                    ])
+
+            # Convert to numpy arrays
+            for key in self.ideal_data:
+                self.ideal_data[key] = np.array(self.ideal_data[key])
+
+            self.empty_buffer_ideal = len(self.ideal_data['t']) == 0
+        except Exception as e:
+            print(f"[Cache] Failed to load ideal data: {e}")
+            self.ideal_data = None
+            self.empty_buffer_ideal = True
 
 
 class FileBrowser(QWidget):

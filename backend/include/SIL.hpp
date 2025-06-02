@@ -37,6 +37,13 @@ inline TrajectoryPoint WaypointToTrajectoryPoint(const Waypoint& wp) {
     };
 }
 
+struct IdealTorquePoint {
+    double t;
+    double theta[3];
+    double theta_dot[3];
+    double tau_ideal[3];
+};
+
 inline Frame CreateFrame(double t, 
                          const Eigen::Vector3d& x,
                          const Eigen::Vector3d& x_dot,
@@ -54,4 +61,9 @@ inline Frame CreateFrame(double t,
 }
 
 TrajectoryPoint interpolateTrajectory(const Trajectory& traj, double t_query);
-void run_sil_simulation(const Trajectory& traj, std::vector<Frame>& results_out);
+
+void run_sil_simulation(
+    const std::vector<Waypoint>& binary_traj,
+    std::vector<Frame>& results_out,
+    std::vector<IdealTorquePoint>& ideal_torques_out
+);

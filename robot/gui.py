@@ -5,12 +5,13 @@ import pyvista as pv
 
 from robot.kinematics import Compute_kine_traj, Compute_Workspace, Compute_Workspace_Sphere, arc, Compute_trajectory_from_data
 from robot.scene import Pyvista3DScene
-from robot.analytic import Plot_velo_accel
+from robot.dynamics import Plot_velo_accel
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtGui import QDoubleValidator, QIcon
 from PyQt5.QtWidgets import QPushButton, QStyle
 from robot.misc import constants, Cart_velocity_ramp, Cartesian_to_spherical, set_config, save_config, load_config, parse_simulation_result
 from scipy.spatial import ConvexHull, Delaunay
+from scipy.interpolate import interp1d
 from skimage import measure
 from robot.measurement import TrajectoryLogger, SimulationLogger, FileBrowser
 from robot.sil_process import SILServerProcess
@@ -136,7 +137,6 @@ class WorkerThreadWorkspace(QtCore.QThread):
             grid, nx, ny, nz, voxels_full = Compute_Workspace(*self.limits, *self.res)
             self.result_signal.emit(grid, nx, ny, nz, voxels_full)
         except Exception as e:
-            # Catch exceptions and emit the error signal with the error message
             # Catch exceptions and emit the error signal with the error message
             error_message = f"Error in worker thread: {str(e)}\n{traceback.format_exc()}"
             self.error_signal.emit(error_message)
@@ -335,8 +335,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.target_btn.clicked.connect(self.change_target_pos)
 
         # Button to compute and display velocities/accelerations
-        self.velo_btn = QPushButton("Plot Motors Velocity/Accelerations")
-        self.velo_btn.clicked.connect(self.open_plot_window)
+        self.dyn_plot_btn = QPushButton("Plot Motors")
+        self.dyn_plot_btn.clicked.connect(self.open_plot_window)
 
         # Angle Input
         self.theta_input = QtWidgets.QLineEdit()
@@ -418,6 +418,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.buffer_reading = False
         self.replay = False
+        self.dynamics_traj = False
 
         self.setup_ui()
 
@@ -486,14 +487,14 @@ class MainWindow(QtWidgets.QMainWindow):
         visual_layout.addWidget(self.toggle_button_workspace)
         visual_layout.addWidget(self.toggle_button_workspace_sphere)
 
-        analysis_group = QtWidgets.QGroupBox("Analysis")
-        analysis_layout = QtWidgets.QVBoxLayout(analysis_group)
-        analysis_layout.addWidget(self.velo_btn)
-
         play_group = QtWidgets.QGroupBox("Preview")
         play_layout = QtWidgets.QHBoxLayout(play_group)
         play_layout.addWidget(self.start_btn)
         play_layout.addWidget(self.simulate_dynamics_btn)
+
+        analysis_group = QtWidgets.QGroupBox("Analysis")
+        analysis_layout = QtWidgets.QVBoxLayout(analysis_group)
+        analysis_layout.addWidget(self.dyn_plot_btn)
 
         measure_group = QtWidgets.QGroupBox("Measure")
         measure_layout = QtWidgets.QHBoxLayout(measure_group)
@@ -509,8 +510,8 @@ class MainWindow(QtWidgets.QMainWindow):
         side_panel_layout.addWidget(initial_position_group)
         side_panel_layout.addWidget(position_group)
         side_panel_layout.addWidget(visual_group)
-        side_panel_layout.addWidget(analysis_group)
         side_panel_layout.addWidget(play_group)
+        side_panel_layout.addWidget(analysis_group)
         side_panel_layout.addWidget(measure_group)
         side_panel_layout.addWidget(save_group)
         side_panel_layout.addStretch()
@@ -764,7 +765,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def start_PyVista_anim(self):
         if hasattr(self, 'visualizer'):
             self.visualizer.stop_anim = True
-            if self.replay:
+            if self.replay or self.dynamics_traj:
                 self.return_scene_to_visible()
             self.visualizer.start_animation()
         else:
@@ -779,11 +780,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.compute_and_update_visualizer()  # Now create or update the visualizer
         self.target_btn.setEnabled(True)
         self.last_action = None
-
-    def handle_results_plot(self, theta_1p, theta_2p, theta_3p, theta_1pp, theta_2pp, theta_3pp, t, tau_1, tau_2,
-                            tau_3):
-        self.plot_window.plot_inv_dynamics(theta_1p, theta_2p, theta_3p, theta_1pp, theta_2pp, theta_3pp, t, tau_1,
-                                           tau_2, tau_3)
 
     def handle_results_workspace(self, grid, nx, ny, nz, voxels_full):
 
@@ -919,18 +915,21 @@ class MainWindow(QtWidgets.QMainWindow):
             self.buffer_reading = False
 
     def return_scene_to_visible(self):
-        self.replay = False
         self.buffer_reading = False
         self.elbow_btn.setEnabled(True)
         self.target_btn.setEnabled(True)
         self.file_browser.play_btn.setEnabled(True)
         self.replay_measure_button.setEnabled(True)
         self.visualizer.stop_anim = True
-        arm = ["Forearm", "Shoulder", "Humerus", "Elbow", "Table", "Trajectory", "Controlled"]
 
-        for name, actor in self.visualizer.scene.renderer.actors.items():
-            if name not in arm:
-                actor.SetVisibility(True)
+        if self.replay:
+
+            arm = ["Forearm", "Shoulder", "Humerus", "Elbow", "Table", "Trajectory", "Controlled"]
+
+            for name, actor in self.visualizer.scene.renderer.actors.items():
+                if name not in arm:
+                    actor.SetVisibility(True)
+
 
         self.visualizer.update_scene(self.p_0, self.phi_arc, self.theta_arc, self.p,
                                      self.p_dot, self.vec_elbow, self.vec_shoulder, self.s_1a, self.s_1b,
@@ -941,6 +940,8 @@ class MainWindow(QtWidgets.QMainWindow):
                                      self.fps)
 
         self.visualizer.update_elbow(fullscene=True)
+        self.replay = False
+        self.dynamics_traj = False
 
     def start_computation_in_thread_workspace(self):
         # Prevent spinning up multiple threads
@@ -972,15 +973,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.worker_thread_workspace_sphere.error_signal.connect(self.handle_thread_error)
         self.worker_thread_workspace_sphere.start()
 
-    def start_computation_in_thread_plot(self):
-        # Prevent spinning up multiple threads
-        if hasattr(self, 'worker_thread_plot') and self.worker_thread_plot.isRunning():
-            return
-        self.worker_thread_plot = WorkerThreadPlot(self.plot_window)
-        self.worker_thread_plot.result_signal.connect(self.handle_results_plot)
-        self.worker_thread_plot.error_signal.connect(self.handle_thread_error)
-        self.worker_thread_plot.start()
-
     def start_computation_in_thread_velo(self):
         if hasattr(self, 'worker_thread_velo') and self.worker_thread_velo.isRunning():
             return  # Still running — don't touch it
@@ -1011,21 +1003,72 @@ class MainWindow(QtWidgets.QMainWindow):
         self.worker_thread_velo.start()
 
     def open_plot_window(self):
-        if self.plot_window is None:  # Only initialize the plot window if it's not already open
-            try:
-                if self.plot_window == None:
-                    self.plot_window = Plot_velo_accel(self.omega_max, self.accel, self.x_0, self.y_0, self.z_0,
-                                                       self.theta * np.pi / 180,
-                                                       self.phi * np.pi / 180)
-                self.start_computation_in_thread_plot()
-                self.plot_window.closed.connect(self.on_plot_window_closed)
-                self.plot_window.setWindowTitle("Motor Dynamics")
-                self.plot_window.setWindowIcon(QIcon("./assets/images/plot_icon.svg"))
-                self.plot_window.show()
-            except Exception as e:
-                print(f"Error in open_plot_window: {e}")
-        else:
-            self.plot_window.activateWindow()  # Brings the window to the foreground if already open
+        # Load cached data
+        self.simulation_logger.load_ideal_data()
+        ideal_data = self.simulation_logger.ideal_data
+
+        # Extract simulation results
+        sim_results = self.simulation_logger.sim_results
+        t_sim = [frame['t'] for frame in sim_results]
+        theta_sim = np.array([frame['theta'] for frame in sim_results])
+        theta_dot_sim = np.array([frame['theta_dot'] for frame in sim_results])
+        tau_sim = np.array([frame['tau'] for frame in sim_results])
+
+        # Check if we have ideal data
+        if ideal_data is None or len(ideal_data['t']) == 0:
+            QtWidgets.QMessageBox.warning(
+                self, "Data Missing",
+                "No ideal data available for comparison"
+            )
+            return
+
+        # Extract ideal data
+        t_ideal = ideal_data['t']
+        theta_ideal = ideal_data['theta']
+        theta_dot_ideal = ideal_data['theta_dot']
+        tau_ideal = ideal_data['tau_ideal']
+
+        # Interpolate ideal data to simulation time base
+        def interpolate_data(t_target, t_source, data_source):
+            data_interp = np.zeros((len(t_target), data_source.shape[1]))
+            for i in range(data_source.shape[1]):
+                interp_fn = interp1d(
+                    t_source, data_source[:, i],
+                    kind='linear', fill_value="extrapolate"
+                )
+                data_interp[:, i] = interp_fn(t_target)
+            return data_interp
+
+        tau_ideal_interp = interpolate_data(t_sim, t_ideal, tau_ideal)
+        theta_ideal_interp = interpolate_data(t_sim, t_ideal, theta_ideal)
+        theta_dot_ideal_interp = interpolate_data(t_sim, t_ideal, theta_dot_ideal)
+
+        # Create plot window
+        if self.plot_window is None:
+            self.plot_window = Plot_velo_accel()
+            self.plot_window.closed.connect(self.on_plot_window_closed)
+            self.plot_window.setWindowTitle("Dynamics Comparison")
+            self.plot_window.setWindowIcon(QIcon("./assets/images/plot_icon.svg"))
+
+        # Plot all comparisons
+        self.plot_window.plot_comparisons(
+            np.array(t_sim),
+            theta_sim, theta_dot_sim, tau_sim,
+            theta_ideal_interp, theta_dot_ideal_interp, tau_ideal_interp
+        )
+        self.plot_window.show()
+
+    def interpolate_torques(self, t_target, t_source, tau_source):
+        tau_interp = np.zeros((len(t_target), 3))
+        for i in range(3):
+            interp_fn = interp1d(
+                t_source,
+                tau_source[:, i],
+                kind='linear',
+                fill_value="extrapolate"
+            )
+            tau_interp[:, i] = interp_fn(t_target)
+        return tau_interp
 
     def on_plot_window_closed(self):
         self.plot_window = None
@@ -1061,6 +1104,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if not self.simulation_logger.needs_recompute(hash):
             print("✅ Using cached SIL simulation results")
             self.simulation_logger.load_cached_simulation()
+            self.simulation_logger.load_ideal_data()
             t_dyn, p_dyn, p_dot_dyn, theta_dyn, theta_dot_dyn, tau_dyn = parse_simulation_result(self.simulation_logger.sim_results)
             p_0, phi_arc, theta_arc, p, vec_elbow, vec_shoulder, s_1a, \
             s_1b, s_2a, s_2b, s_3a, s_3b, d, v_1, v_2, v_3, m_1_point, \
@@ -1078,6 +1122,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
             self.visualizer.resampling(t=t_dyn)
             self.start_PyVista_anim()
+            self.dynamics_traj = True
             self.simulate_dynamics_btn.setEnabled(True)
             self.simulate_dynamics_btn.setText("Simulate Dynamics")
             return
@@ -1089,8 +1134,24 @@ class MainWindow(QtWidgets.QMainWindow):
 
         def on_result(results):
             # Save new simulation result to buffer
+
+            simulation_results = results [0]
+            ideal_points = results [1]
+
+            # Extract arrays from ideal_points
+            t_ideal = [point['t'] for point in ideal_points]
+            theta_ideal = [point['theta'] for point in ideal_points]
+            theta_dot_ideal = [point['theta_dot'] for point in ideal_points]
+            tau_ideal = [point['tau_ideal'] for point in ideal_points]
+
+            # Save full ideal data
+            self.simulation_logger.save_ideal_data(
+                t_ideal, theta_ideal, theta_dot_ideal, tau_ideal
+            )
+
             sim_hash = self.simulation_logger.compute_trajectory_hash(trajectory_data)
-            self.simulation_logger.save_simulation_results(results, sim_hash)
+            self.simulation_logger.save_simulation_results(simulation_results, sim_hash)
+
             t_dyn, p_dyn, p_dot_dyn, theta_dyn, theta_dot_dyn, tau_dyn = parse_simulation_result(self.simulation_logger.sim_results)
             p_0, phi_arc, theta_arc, p, vec_elbow, vec_shoulder, s_1a, \
             s_1b, s_2a, s_2b, s_3a, s_3b, d, v_1, v_2, v_3, m_1_point, \
@@ -1108,6 +1169,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
             self.visualizer.resampling(t=t_dyn)
             self.start_PyVista_anim()
+            self.dynamics_traj = True
             self.simulate_dynamics_btn.setEnabled(True)
             return
 

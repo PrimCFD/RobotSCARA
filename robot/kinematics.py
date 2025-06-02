@@ -79,7 +79,7 @@ def arc(x_0, y_0, z_0, theta, phi, kine):
     r_0, theta_0, phi_0 = Cartesian_to_spherical(x_0, y_0, z_0, vec_elbow, 1)
 
     if kine:
-        N_per_decideg = 2
+        N_per_decideg = 10
         N_points = int(angular_dist(theta_0, theta_0 + theta, phi_0,
                                     phi_0 + phi) * 180 / np.pi * N_per_decideg * 10)  # 2 points per 0.1 degree of arc
 

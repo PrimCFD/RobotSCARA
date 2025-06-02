@@ -9,8 +9,54 @@
 
 void run_sil_simulation(
     const std::vector<Waypoint>& binary_traj,
-    std::vector<Frame>& results_out)
+    std::vector<Frame>& results_out,
+    std::vector<IdealTorquePoint>& ideal_torques_out)
     {
+
+    RobotDynamics robot_ideal;
+    robot_ideal.loadHardcodedParams();
+
+    // Pre-compute ideal torques
+    ideal_torques_out.clear();
+    ideal_torques_out.reserve(binary_traj.size());
+
+    Eigen::Vector3d theta_prev(-2.72, -0.38, -1.92);
+    for (size_t i = 0; i < binary_traj.size(); ++i) {
+        const Waypoint& wp = binary_traj[i];
+        Eigen::Vector3d x(wp.x[0], wp.x[1], wp.x[2]);
+        Eigen::Vector3d x_dot(wp.x_dot[0], wp.x_dot[1], wp.x_dot[2]);
+        Eigen::Vector3d x_ddot(wp.x_ddot[0], wp.x_ddot[1], wp.x_ddot[2]);
+
+        // Solve IK
+        auto ik_sol = robot_ideal.invKineSinglePoint(x, theta_prev);
+        if (!ik_sol.valid) {
+            ik_sol.theta = theta_prev;  // Use previous if invalid
+        }
+        theta_prev = ik_sol.theta;
+
+        // Compute inverse dynamics
+        auto res = robot_ideal.computeInverseDynamics(x, x_dot, x_ddot, ik_sol.theta);
+
+        // Compute joint velocity
+        Eigen::Matrix3d J = robot_ideal.computeJ(x, ik_sol.theta);
+        Eigen::Matrix3d K = robot_ideal.computeK(x, ik_sol.theta);
+        Eigen::Matrix3d K_inv = robot_ideal.dampedPseudoInverse(K);
+        Eigen::Vector3d theta_dot = K_inv * J * x_dot;
+
+        IdealTorquePoint itp;
+        itp.t = wp.t;
+        // Store joint positions/velocities
+        for (int j = 0; j < 3; j++) {
+            itp.theta[j] = ik_sol.theta(j);
+            itp.theta_dot[j] = theta_dot(j);
+        }
+        if (res.success) {
+            std::copy(res.torque.data(), res.torque.data()+3, itp.tau_ideal);
+        } else {
+            std::fill(itp.tau_ideal, itp.tau_ideal+3, 0.0);
+        }
+        ideal_torques_out.push_back(itp);
+    }
 
     // Pre-allocate memory for results
     size_t estimated_frames = static_cast<size_t>((binary_traj.back().t - binary_traj.front().t) * 1000);
@@ -30,14 +76,14 @@ void run_sil_simulation(
         }
     }
 
-    RobotDynamics robot;
-    robot.loadHardcodedParams();
-
     // Ensure trajectory is valid
     if (traj.empty()) {
         std::cerr << "Error: Empty trajectory provided\n";
         return;
     }
+
+    RobotDynamics robot;
+    robot.loadHardcodedParams();
 
     // Create and configure controller
     Controller controller;
