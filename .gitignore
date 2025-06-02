@@ -8,4 +8,5 @@ scara_venv
 .vscode
 bin
 backend/build
+site
 

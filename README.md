@@ -142,6 +142,7 @@ For details, refer to [`docs/control.md`](./docs/control.md)
 │   └── generate_params.py
 ├── SCARA.py              # Python entry point
 ├── launcher.bat/.bash/.py
+├── mkdocs.yml
 ├── requirements.txt
 └── README.md
 ```

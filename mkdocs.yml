@@ -1,11 +1,48 @@
 site_name: SCARA Robot Docs
-nav:
-  - Home: index.md
-  - Control Architecture: docs/control.md
-  - Kinematics & Dynamics: docs/kindyn.md
+site_url: https://PrimCFD.github.io/RobotSCARA/
+repo_url:  https://github.com/PrimCFD/RobotSCARA
+repo_name: RobotSCARA
 theme:
   name: material
+  language: en
   features:
     - navigation.tabs
-    - content.code.copy
     - navigation.sections
+    - content.code.copy
+    - content.action.edit
+    - content.code.annotate
+  palette:
+    - scheme: default
+      primary: blue
+      accent: cyan
+
+markdown_extensions:
+  - admonition
+  - codehilite:
+      guess_lang: false
+  - pymdownx.highlight:
+      linenums: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.details
+  - pymdownx.emoji
+  - pymdownx.tasklist
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tabbed
+  - pymdownx.arithmatex:  # For LaTeX math
+      generic: true
+  - attr_list
+  - md_in_html
+
+plugins:
+  - search
+
+extra_javascript:
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+nav:
+  - Home: docs/index.md
+  - Control Architecture: docs/control.md
+  - Kinematics & Dynamics: docs/kindyn.md
