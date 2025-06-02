@@ -145,23 +145,19 @@ Upcoming features :
 >     - *{Title}.gif* &rarr; README gifs
 > - **./backend/**
 >    - **./build/** &rarr; CMake build files
->    - **./external/** 
->      - **./qpOASES/** &rarr; QP control optimization Library
->        - **./include/** &rarr; Headers
->        - **./src/** &rarr; .cpp files to compile
 >    - **./include/**
->      - **./boost/** &rarr; asio library
 >      - **./Eigen/** &rarr; Linear algebra library
->      - **./nlohmann/** &rarr; json library
+>      - *Controller.hpp* &rarr; Controller class header
+>      - *HardcodedParams.hpp* &rarr; Generated header file hardcoding parameters
 >      - *RobotModel.hpp* &rarr; RobotModel class header
 >      - *SIL.hpp* &rarr; Header to be in server scope
->      - *TorqueQP.hpp* &rarr; TorqueQP class header
 >    - **./src/**
->      - *main_server.cpp* &rarr; IPC Server
->      - *RobotModel.cpp* &rarr; Dynamics computations
->      - *SIL.cpp* &rarr; Software in the loop simulation
->      - *TorqueQP.cpp* &rarr; QP Torque Optimization
->    - *CMakeLists.txt*
+>     - *Controller.cpp* &rarr; Controller
+>     - *main_server.cpp* &rarr; IPC Server
+>     - *HIL.cpp* &rarr; Hardware in the loop
+>     - *RobotModel.cpp* &rarr; Dynamics computations
+>     - *SIL.cpp* &rarr; Software in the loop simulation
+>    - *CMakeLists.txt* &rarr; Builds backend for SIL or HIL
 > - **./bin/** &rarr; C++ binary : Server  + SIL/HIL
 > - **./buffer/**
 >   - *buffer.csv* &rarr; Trajectory buffered before save (t, θ, φ)
@@ -179,12 +175,14 @@ Upcoming features :
 >     - *Trajectory_1.csv*
 >     - *Trajectory_2.csv*
 >     - ...
+> - **./docs/**
+>   - [*control.md*](./docs/control.md) / [*kindyn.html*](./docs/kindyn.html) &rarr; Theory / choices for robot control
+>   - [*kindyn.md*](./docs/kindyn.md) / [*kindyn.html*](./docs/kindyn.html) &rarr; Theory / choices for kinematic/dynamic modeling
 > - **./robot/**
 >   - *\_\_init__.py*
 >   - *analytic.py* &rarr; Dynamic modeling
->   - *controller.py* &rarr; Controller
 >   - *gui.py* &rarr; **PyQt** Main window 
->   - *hil_client* &rarr; IPC Client for HIL
+>   - *hil_client.py* &rarr; IPC Client for HIL
 >   - *kinematics.py* &rarr; Inverse Kinematics (IK)
 >   - *misc.py* &rarr; Miscallenous functions
 >   - *scene.py* &rarr; **PyVista** QtInteractor widget
@@ -199,14 +197,16 @@ Upcoming features :
 >     - *kinematics_perf_test.py*
 >     - *memory_perf_test.py*
 >   - **./unit/** &rarr; Checks main functions
->     - *config_test_test.py*
+>     - *config_test.py*
 >     - *conftest.py*
 >     - *dynamics_test.py*
 >     - *kinematics_test.py*
 >     - *velocity_profile_test.py*
-> - **./docs/**
->   - [*control.md*](./docs/control.md) / [*kindyn.html*](./docs/kindyn.html) &rarr; Theory / choices for robot control
->   - [*kindyn.md*](./docs/kindyn.md) / [*kindyn.html*](./docs/kindyn.html) &rarr; Theory / choices for kinematic/dynamic modeling
+> - **./utils/** &rarr; Python utility files
+> - - *generate_params.py* &rarr; Generates *HardcodedParams.hpp* at compile time
+>   - *jacobians.py* &rarr; Sympy computation of Joint/Task spaces jacobians
+>   - *jacobians_dot.py* &rarr; Sympy computation of Joint/Task spaces jacobians derivatives
+>   - *litteral.py* &rarr; EPM method EOM computation : M, G matrices
 > - .*gitignore*
 > - *launcher.bash* &rarr; Windows Launcher executable
 > - *launcher.bat* &rarr; Linux/MacOS Launcher Executable

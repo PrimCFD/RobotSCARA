@@ -35,7 +35,7 @@ public:
     explicit RobotDynamics(const RobotParams& params);
     
     // Configuration loading
-    void RobotDynamics::loadHardcodedParams();
+    void loadHardcodedParams();
     void setParameters(const RobotParams& params);
 
     Eigen::Vector3d getInitialPosition() const {

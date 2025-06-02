@@ -64,9 +64,6 @@ void run_sil_simulation(
     // FK validation
     Eigen::Vector3d x0_fk = robot.forwardKinematics(init_sol.theta, x_0);
 
-    std::cout<<"x0_fk"<<x0_fk<<std::endl;
-    std::cout<<"theta"<<theta<<std::endl;
-
     if ((x0_fk - x_0).norm() > 1e-3) {
         std::cerr << "Warning: Initial FK error: " 
                 << (x0_fk - x_0).norm() << std::endl;
