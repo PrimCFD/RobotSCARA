@@ -86,123 +86,138 @@ $$
 ## 2. Dynamics
 
 ### Abstract
-This simulation uses the **slender link method** - a simplified approach for dynamic modeling of parallel robots. The method enables efficient computation of distal link kinetic energy using endpoint velocities rather than complex angular velocity expressions. Derived from Lagrangian mechanics, this technique is particularly effective for robots with slender distal links undergoing high-speed motion.
+
+This simulation uses the **Equivalent Point Mass (EPM)** method — a simplified approach for dynamic modeling of parallel robots. The method replaces distal links with dynamically equivalent point masses at their endpoints, eliminating complex angular velocity calculations. Derived from Lagrangian mechanics, this technique is **computationally efficient** while maintaining **good accuracy for slender links**.
 
 ---
 
-### Slender Link Method
+### Equivalent Point Mass (EPM) Method
 
-### Key Concept
-For distal links in parallel robots:
-- Traditional kinetic energy calculation requires angular velocity and center-of-mass velocity
-- Slender link method approximates energy using **endpoint velocities only**
-- Assumes:
-  - Uniform mass distribution along link
-  - Ideal slenderness (negligible cross-sectional dimensions)
+#### Core Concept
 
-### Velocity Relationship
-For a distal link between points $B_i$ and $C_i$:
-$$\mathbf{v}_2 - \mathbf{v}_1 = \boldsymbol{\omega} \times \mathbf{d}$$
+The EPM method simplifies dynamics by:
 
-where:
+- Replacing distal links with point masses at their endpoints (Bᵢ and Cᵢ)  
+- Assigning masses based on energy equivalence principles  
+- Handling potential and kinetic energy separately  
 
--   $\mathbf{v}_1, \mathbf{v}_2$​  = Endpoint velocities
-    
--   $\boldsymbol{\omega}$= Angular velocity
-    
--   $\mathbf{d}$ = Link vector (from  BiBi​  to  CiCi​)
-    
+---
 
-### Kinetic Energy Formulation
+#### Mass Assignment Strategies
 
-The kinetic energy of a slender link is calculated as:
+**For Potential Energy (exact equivalence):**
 
 $$
-T_s = \frac{1}{2} \left( \frac{m}{3}\mathbf{v}_1^T\mathbf{v}_1 + \frac{m}{3}\mathbf{v}_2^T\mathbf{v}_2 + \frac{m}{3}\mathbf{v}_1^T\mathbf{v}_2 \right)
+m_{p1} = \frac{m l_2}{l_1 + l_2}, \quad 
+m_{p2} = \frac{m l_1}{l_1 + l_2}
 $$
 
-**Derivation**:
+Where \( l_1, l_2 \) are distances from the center of mass to the endpoints.  
+For symmetric links:
 
-1.  Express velocity at any point  xx  along the link:
 $$
-\mathbf{v}_x = \mathbf{v}_1 + \frac{x}{l}(\mathbf{v}_2 - \mathbf{v}_1)
+m_{p1} = m_{p2} = \frac{m}{2}
 $$
 
-2.  Integrate kinetic energy over link length  ll:
+---
+
+**For Kinetic Energy (approximate equivalence):**
+
+##### Fixed Mass Method:
+- \( m_{k1} = m_{k2} = \frac{m}{2} \) (simple but less accurate)  
+- or \( m_{k1} = \frac{m}{3}, \quad m_{k2} = \frac{2m}{3} \) (better for rotational inertia)
+
+##### Variable Mass Method (higher accuracy):
+
 $$
-T_s = \int_0^l \frac{1}{2} \frac{m}{l} \mathbf{v}_x^T\mathbf{v}_x dx
+\begin{align*}
+m_{k1} &= \frac{m}{3}(1 + k_1) \\
+m_{k2} &= \frac{m}{3}(1 + k_2)
+\end{align*}
 $$
-----------
+
+With \( k \)-coefficients calculated via minimum-norm solution:
+
+$$
+k_1 = \frac{|\mathbf{v}_1|^2}{|\mathbf{v}_1|^4 + |\mathbf{v}_2|^4} \mathbf{v}_1^T \mathbf{v}_2, \quad
+k_2 = \frac{|\mathbf{v}_2|^2}{|\mathbf{v}_1|^4 + |\mathbf{v}_2|^4} \mathbf{v}_1^T \mathbf{v}_2
+$$
+
+---
 
 ### Dynamic Model Implementation
 
-### Jacobian Relationships
+#### Energy Formulation
 
-Endpoint velocities are related through robot kinematics:
+Kinetic energy for distal links simplifies to:
 
 $$
-\mathbf{J}\dot{\mathbf{p}} = \mathbf{K}\dot{\boldsymbol{\theta}}
+T_{\text{EPM}} = \frac{1}{2} (m_{k1} \mathbf{v}_1^T \mathbf{v}_1 + m_{k2} \mathbf{v}_2^T \mathbf{v}_2)
 $$
 
-where:
+---
 
--   $\mathbf{J}, \mathbf{K}$  = Jacobian matrices
-    
--   $\dot{\mathbf{p}}$​  = Cartesian velocities
-    
--   $\dot{\boldsymbol{\theta}}$ = Joint velocities
-    
-
-### Actuator Torques
+#### Actuator Torques
 
 Total torque combines contributions from:
 
-1.  Links (Joint space : proximal and distal)
-    $$
-\boldsymbol{\tau}_a = \frac{d}{dt}\left( \frac{\partial T}{\partial \dot{\boldsymbol{\theta}}} \right) 
--\frac{\partial T}{\partial \boldsymbol{\theta}} 
-+\frac{\partial V}{\partial \boldsymbol{\theta}}
-$$
-2.  Platform (Cartesian space)
-    $$
-\mathbf{f} = \frac{d}{dt}\left( \frac{\partial T}{\partial \dot{\mathbf{p}}} \right) 
--\frac{\partial T}{\partial \mathbf{p}} 
-+\frac{\partial V}{\partial \mathbf{p}}$$
-3.  Total torque delivered by actuators
-$$
-\boldsymbol{\tau} = \boldsymbol{\tau}_a + (\mathbf{J}^{-1}\mathbf{K})^T \mathbf{f}$$
+**Proximal links (joint space):**
 
-----------
+$$
+\boldsymbol{\tau}_a = \frac{d}{dt}\left( \frac{\partial T}{\partial \dot{\boldsymbol{\theta}}} \right) - \frac{\partial T}{\partial \boldsymbol{\theta}} + \frac{\partial V}{\partial \boldsymbol{\theta}}
+$$
+
+**Platform + distal points (Cartesian space):**
+
+$$
+\mathbf{f} = \frac{d}{dt}\left( \frac{\partial T}{\partial \dot{\mathbf{p}}} \right) - \frac{\partial T}{\partial \mathbf{p}} + \frac{\partial V}{\partial \mathbf{p}}
+$$
+
+**Total actuator torque:**
+
+$$
+\boldsymbol{\tau} = \boldsymbol{\tau}_a + (\mathbf{J}^{-1}\mathbf{K})^T \mathbf{f}
+$$
+
+---
 
 ### Advantages & Limitations
 
-### ✔️ Advantages
+#### ✔️ Advantages
 
--   Eliminates need for complex angular velocity calculations
-    
--   Reduces computational complexity by 40-60% vs exact models
-    
--   Maintains good accuracy for slender links (typical RMSE <5%)
-    
--   Enables real-time control implementation
-    
+- Eliminates complex angular velocity calculations  
+- Reduces computational cost by 30–60% vs exact models  
+- Maintains >95% accuracy for slender links  
+- Fixed mass method enables real-time control  
+- Variable mass improves accuracy for known trajectories  
 
-### ❌ Limitations
+#### ❌ Limitations
 
--   Accuracy decreases for thick/rotating links
-    
--   Requires endpoint velocity computation
-    
--   Assumes ideal mass distribution
-    
+- Accuracy decreases for thick/rotating links  
+- Fixed masses: limited accuracy across configurations  
+- Variable masses: requires known trajectories  
+- Potential energy: exact only when COM lies on link axis  
 
+---
 
-----------
+### Performance Comparison
+
+| Method             | Comp. Cost | Torque RMSE | Best For             |
+|--------------------|------------|-------------|----------------------|
+| Fixed Mass EPM     | Lowest     | 5–6 Nmm     | Real-time control    |
+| Variable Mass      | Medium     | 2–3 Nmm     | Known trajectories   |
+| Slender Link*      | High       | 0.4 Nmm     | General-purpose      |
+
+> \* Reference method from original paper
+
+---
 
 ### Conclusion
 
-The slender link method provides an effective balance between accuracy and computational efficiency for parallel robots with slender distal links. While not universally applicable, it enables practical implementation of model-based control strategies in high-speed applications.
+The EPM method provides an effective balance between **accuracy** and **computational efficiency**. For **real-time control**, fixed masses (\( m/2 \) or \( m/3 + 2m/3 \)) are recommended. For **trajectory-based tasks**, variable masses offer superior accuracy with moderate computation overhead.
 
----  
-- Original Paper:    
-**Zhou Z., Gosselin C.**  (2024)  _Simplified Inverse Dynamic Models of Parallel Robots Based on Lagrangian Approach_. Meccanica 59:657-680. DOI:[10.1007/s11012-024-01782-6](https://doi.org/10.1007/s11012-024-01782-6)
+---
+
+- Original Paper: 
+  Zhou Z., Gosselin C. (2024) *Simplified Inverse Dynamic Models of Parallel Robots Based on Lagrangian Approach*.  
+  **Meccanica**, 59:657–680. DOI: [10.1007/s11012-024-01782-6](https://doi.org/10.1007/s11012-024-01782-6)

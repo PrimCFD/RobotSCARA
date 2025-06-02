@@ -1,0 +1,11 @@
+site_name: SCARA Robot Docs
+nav:
+  - Home: index.md
+  - Control Architecture: docs/control.md
+  - Kinematics & Dynamics: docs/kindyn.md
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - content.code.copy
+    - navigation.sections
