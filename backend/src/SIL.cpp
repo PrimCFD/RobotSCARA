@@ -88,12 +88,19 @@
             0.0,
             integral_error);
 
-    Eigen::Vector3d theta_ddot = robot.computeForwardDynamics(theta, initial_torque, x_ref);
+    Eigen::Vector3d theta_ddot = robot.computeForwardDynamics(theta, theta_dot, initial_torque, x_ref);
 
     // Initialize state variables
     Eigen::Vector3d x = x_ref;
     Eigen::Vector3d x_dot = x_dot_0;
     Eigen::Vector3d x_ddot = x_ddot_0;
+
+    // Initialize torque to zero
+    Eigen::Vector3d torque = Eigen::Vector3d::Zero();
+
+    // Controller rate setup (1ms period)
+    const double control_dt = 0.001; // 1ms controller period
+    double t_control_next = 0.0;     // Next controller update time
 
     // Adaptive stepping parameters
     double t = 0.0;
@@ -146,21 +153,25 @@
             Eigen::Vector3d x_prev = x;  // Save previous valid reference
             Eigen::Vector3d integral_error_prev = integral_error;
 
-            // Get desired position
-            TrajectoryPoint target = controller.interpolateTrajectory(traj, t);
-
-            // Compute torque
-            Eigen::Vector3d torque = controller.computeMPCTorque(
-                target,   // Combined desired state
-                x,        // current_pos
-                x_dot,    // current_vel
-                x_ddot,   // current_accel
-                theta,
-                theta_dot,
-                robot,
-                dt,
-                integral_error
-            );
+            // --- CONTROLLER UPDATE AT FIXED RATE ---
+            if (t >= t_control_next) {
+                // Get desired state at current time
+                TrajectoryPoint target = controller.interpolateTrajectory(traj, t);
+                
+                // Update torque and integral_error using control_dt
+                torque = controller.computeMPCTorque(
+                    target,
+                    x,         // current_pos
+                    x_dot,     // current_vel
+                    x_ddot,    // current_accel
+                    theta,
+                    theta_dot,
+                    robot,
+                    control_dt, // Use fixed control period for integral
+                    integral_error
+                );
+                t_control_next += control_dt; // Schedule next update
+            }
 
             if (std::isnan(torque.sum())) {
                 // Diagnostic output
@@ -171,56 +182,31 @@
                 torque = Eigen::Vector3d::Zero();
             }
 
-            auto torqueStage = [&](double t_local,
-                            const Eigen::Vector3d& th,
-                            const Eigen::Vector3d& thd,
-                            const Eigen::Vector3d& x_current,
-                            Eigen::Vector3d int_err) {
-
-            TrajectoryPoint target = controller.interpolateTrajectory(traj, t_local);
-            Eigen::Matrix3d J = robot.computeJ(x_current, th);
-            Eigen::Matrix3d K = robot.computeK(x_current, th);
-            Eigen::Matrix3d J_inv = robot.dampedPseudoInverse(J);
-            return controller.computeMPCTorque(target,
-                                            x_current,
-                                            /*current vel*/ J_inv*K*thd,
-                                            /*current acc*/ Eigen::Vector3d::Zero(),
-                                            th, thd, robot, dt, int_err);
-                                            
-                            };
-
             // RK4 integration with proper state propagation
 
 
             while (!step_accepted && attempts < max_attempts) {
                 // Stage k1 - Use current x
                 Eigen::Vector3d k1_th_dot = theta_dot;
-                Eigen::Vector3d torque_1 = torqueStage(t, theta, k1_th_dot, x_prev, integral_error_prev);
-                Eigen::Vector3d k1_th_ddot = robot.computeForwardDynamics(theta, torque_1, x_prev);
+                Eigen::Vector3d k1_th_ddot = robot.computeForwardDynamics(theta, k1_th_dot, torque, x_prev);
 
                 // Stage k2 - Update x_k2 and use it for dynamics
                 Eigen::Vector3d k2_th = theta + 0.5 * dt * k1_th_dot;
                 Eigen::Vector3d x_k2 = robot.forwardKinematics(k2_th, x_prev);
                 Eigen::Vector3d k2_th_dot = theta_dot + 0.5 * dt * k1_th_ddot;
-                // Recompute dynamics matrices for x_k2
-                Eigen::Vector3d torque_2 = torqueStage(t + 0.5 * dt, k2_th, k2_th_dot, x_k2, integral_error_prev + 0.5 * dt * (target.x - x_k2));
-                Eigen::Vector3d k2_th_ddot = robot.computeForwardDynamics(k2_th, torque_2, x_k2);  // Use x_k2
+                Eigen::Vector3d k2_th_ddot = robot.computeForwardDynamics(k2_th, k2_th_dot, torque, x_k2);  // Use x_k2
 
                 // Stage k3 - Update x_k3 and use it for dynamics
                 Eigen::Vector3d k3_th = theta + 0.5 * dt * k2_th_dot;
                 Eigen::Vector3d x_k3 = robot.forwardKinematics(k3_th, x_k2);  // Use x_k2 as reference
                 Eigen::Vector3d k3_th_dot = theta_dot + 0.5 * dt * k2_th_ddot;
-                // Recompute dynamics matrices for x_k3
-                Eigen::Vector3d torque_3 = torqueStage(t + 0.5 * dt, k3_th, k3_th_dot, x_k3, integral_error_prev + 0.5 * dt * (target.x - x_k3));
-                Eigen::Vector3d k3_th_ddot = robot.computeForwardDynamics(k3_th, torque_3, x_k3);  // Use x_k3
+                Eigen::Vector3d k3_th_ddot = robot.computeForwardDynamics(k3_th, k3_th_dot, torque, x_k3);  // Use x_k3
 
                 // Stage k4 - Update x_k4 and use it for dynamics
                 Eigen::Vector3d k4_th = theta + dt * k3_th_dot;
                 Eigen::Vector3d x_k4 = robot.forwardKinematics(k4_th, x_k3);  // Use x_k3 as reference
                 Eigen::Vector3d k4_th_dot = theta_dot + dt * k3_th_ddot;
-                // Recompute dynamics matrices for x_k4
-                Eigen::Vector3d torque_4 = torqueStage(t + dt, k4_th, k4_th_dot, x_k4, integral_error_prev + 0.5 * dt * (target.x - x_k4));
-                Eigen::Vector3d k4_th_ddot = robot.computeForwardDynamics(k4_th, torque_4, x_k4);  // Use x_k4
+                Eigen::Vector3d k4_th_ddot = robot.computeForwardDynamics(k4_th, k4_th_dot, torque, x_k4);  // Use x_k4
 
                 // Compute RK4 and RK3 estimates for θ and θ_dot
                 Eigen::Vector3d theta_rk4 = theta + (dt/6.0) * (k1_th_dot + 2*k2_th_dot + 2*k3_th_dot + k4_th_dot);
@@ -283,7 +269,7 @@
                     x_dot = J_inv * K * theta_dot;
 
                     // Compute new task-space acceleration
-                    theta_ddot = robot.computeForwardDynamics(theta, torque, x);
+                    theta_ddot = robot.computeForwardDynamics(theta, theta_dot, torque, x);
                     Eigen::Matrix3d J_dot = robot.computeJDot(x_dot, theta, theta_dot);
                     Eigen::Matrix3d K_dot = robot.computeKDot(x, x_dot, theta, theta_dot);
 
@@ -312,7 +298,7 @@
                     break;
                 } else {
                     // Force Euler step
-                    Eigen::Vector3d th_ddot = robot.computeForwardDynamics(theta, torque, x + dt * x_dot);
+                    Eigen::Vector3d th_ddot = robot.computeForwardDynamics(theta, theta_dot, torque, x + dt * x_dot);
                     theta_dot += dt * th_ddot;
                     theta += theta_dot * dt;
 

@@ -76,8 +76,9 @@ public:
 
     Eigen::Vector3d computeGravity(const Eigen::Vector3d& theta, const Eigen::Vector3d& pos) const;
 
-    Eigen::Vector3d computeForwardDynamics(
+    Eigen::Vector3d RobotDynamics::computeForwardDynamics(
         const Eigen::Vector3d& theta,
+        const Eigen::Vector3d& theta_dot,
         const Eigen::Vector3d& torque,
         const Eigen::Vector3d& pos
     ) const;

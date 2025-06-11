@@ -237,6 +237,7 @@ Eigen::Vector3d RobotDynamics::computeGravity(const Eigen::Vector3d& theta, cons
 
 Eigen::Vector3d RobotDynamics::computeForwardDynamics(
     const Eigen::Vector3d& theta,
+    const Eigen::Vector3d& theta_dot,
     const Eigen::Vector3d& torque,
     const Eigen::Vector3d& pos
 ) const {
@@ -270,6 +271,7 @@ Eigen::Vector3d RobotDynamics::computeTorque(
     // Compute basic torques
     Eigen::Matrix3d M = computeMassMatrix(theta, pos);
     Eigen::Vector3d G = computeGravity(theta, pos);
+    
     Eigen::Vector3d tau_e = M * theta_ddot + G;
     
     return tau_e;
