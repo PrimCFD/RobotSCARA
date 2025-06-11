@@ -10,10 +10,12 @@ theta2 = sp.Function('theta2')(t)
 theta3 = sp.Function('theta3')(t)
 
 # Define constants
-a1x, a1y, a2x, a2y, a3x, a3y = sp.symbols('a1x a1y a2x a2y a3x a3y')
-l11, l21, l31 = sp.symbols('l11 l21 l31')
-v1, v2, v3 = sp.symbols('v1 v2 v3')  # End-effector z-offsets
-h1, h2, h3 = sp.symbols('h1 h2 h3')  # Base joint z-positions
+a1x, a1y, a1z = sp.symbols('a1x a1y a1z')
+a2x, a2y, a2z = sp.symbols('a2x a2y a2z')
+a3x, a3y, a3z = sp.symbols('a3x a3y a3z')
+l11, l21, l31 = sp.symbols('l11 l21 l31')  # Proximal link lengths
+v_1, v_2, v_3 = sp.symbols('v_1 v_2 v_3')  # Platform z-offsets
+d = sp.symbols('d')  # Platform height
 
 # Time derivatives
 x_dot = sp.diff(x, t)
@@ -24,19 +26,38 @@ theta2_dot = sp.diff(theta2, t)
 theta3_dot = sp.diff(theta3, t)
 
 # =====================
-# Constraint Vectors (g_i)
+# Proximal Joint Positions (s_i)
 # =====================
-g1x = x - a1x - l11*sp.cos(theta1)
-g1y = y - a1y - l11*sp.sin(theta1)
-g1z = (z + v1) - h1
 
-g2x = x - a2x - l21*sp.cos(theta2)
-g2y = y - a2y - l21*sp.sin(theta2)
-g2z = (z + v2) - h2
+# Leg 1 (XY-plane motion)
+s1x = a1x + l11 * sp.cos(theta1)
+s1y = a1y + l11 * sp.sin(theta1)
+s1z = a1z  # Fixed Z-position
 
-g3x = x - a3x - l31*sp.cos(theta3)
-g3y = y - a3y  # Fixed y-position for leg 3
-g3z = (z + v3) - (h3 + l31*sp.sin(theta3))
+# Leg 2 (XY-plane motion)
+s2x = a2x + l21 * sp.cos(theta2)
+s2y = a2y + l21 * sp.sin(theta2)
+s2z = a2z  # Fixed Z-position
+
+# Leg 3 (XZ-plane motion)
+s3x = a3x + l31 * sp.cos(theta3)
+s3y = a3y  # Fixed Y-position
+s3z = a3z + l31 * sp.sin(theta3)
+
+# =====================
+# Constraint Vectors (g_i = c - s_i)
+# =====================
+g1x = x - s1x
+g1y = y - s1y
+g1z = (z + (d - v_1)) - s1z
+
+g2x = x - s2x
+g2y = y - s2y
+g2z = (z + (d - v_2)) - s2z
+
+g3x = x - s3x
+g3y = y - s3y
+g3z = (z + (d - v_3)) - s3z
 
 # =====================
 # Jacobian Matrix J
@@ -48,30 +69,40 @@ J = sp.Matrix([
 ])
 
 # =====================
-# Jacobian Matrix K
+# Jacobian Matrix K (Diagonal)
 # =====================
-K11 = g1x * (l11*sp.sin(theta1)) + g1y * (-l11*sp.cos(theta1))
-K22 = g2x * (l21*sp.sin(theta2)) + g2y * (-l21*sp.cos(theta2))
-K33 = g3x * (l31*sp.sin(theta3)) + g3z * (-l31*sp.cos(theta3))
+# Derivatives of proximal joint positions w.r.t joint angles
+ds1_dtheta1 = sp.Matrix([-l11*sp.sin(theta1), l11*sp.cos(theta1), 0])
+ds2_dtheta2 = sp.Matrix([-l21*sp.sin(theta2), l21*sp.cos(theta2), 0])
+ds3_dtheta3 = sp.Matrix([-l31*sp.sin(theta3), 0, l31*sp.cos(theta3)])
 
+# K matrix elements (dot product of g_i and ds_i/dtheta_i)
+K11 = sp.Matrix([g1x, g1y, g1z]).dot(ds1_dtheta1)
+K22 = sp.Matrix([g2x, g2y, g2z]).dot(ds2_dtheta2)
+K33 = sp.Matrix([g3x, g3y, g3z]).dot(ds3_dtheta3)
+
+# Construct diagonal K matrix
 K = sp.diag(K11, K22, K33)
 
 # =====================
-# Time Derivatives
+# Time Derivatives (J_dot and K_dot)
 # =====================
 
-# Compute J_dot
+# Compute J_dot by differentiating each element
 J_dot = sp.Matrix.zeros(3, 3)
 for i in range(3):
     for j in range(3):
-        J_dot[i,j] = sp.diff(J[i,j], t).simplify()
+        J_dot[i, j] = sp.diff(J[i, j], t)
 
-# Compute K_dot
+# Compute K_dot by differentiating diagonal elements
 K_dot = sp.diag(
-    sp.diff(K[0,0], t).simplify(),
-    sp.diff(K[1,1], t).simplify(),
-    sp.diff(K[2,2], t).simplify()
+    sp.diff(K[0, 0], t),
+    sp.diff(K[1, 1], t),
+    sp.diff(K[2, 2], t)
 )
+
+J_dot_simp = sp.trigsimp(J_dot)
+K_dot_simp = sp.trigsimp(K_dot)
 
 # =====================
 # Simplify and Display
@@ -81,19 +112,6 @@ sp.pprint(J)
 print("\nJacobian Matrix K:")
 sp.pprint(K)
 print("\nTime Derivative of J (J_dot):")
-sp.pprint(J_dot)
+sp.pprint(J_dot_simp)
 print("\nTime Derivative of K (K_dot):")
-sp.pprint(K_dot)
-
-# Output simplified expressions for C++ implementation
-print("\n\n// C++ J_dot Implementation")
-print("Eigen::Matrix3d J_dot;")
-print(f"J_dot << {sp.ccode(J_dot[0,0])}, {sp.ccode(J_dot[0,1])}, {sp.ccode(J_dot[0,2])},")
-print(f"         {sp.ccode(J_dot[1,0])}, {sp.ccode(J_dot[1,1])}, {sp.ccode(J_dot[1,2])},")
-print(f"         {sp.ccode(J_dot[2,0])}, {sp.ccode(J_dot[2,1])}, {sp.ccode(J_dot[2,2])};")
-
-print("\n\n// C++ K_dot Implementation")
-print("Eigen::Matrix3d K_dot = Eigen::Matrix3d::Zero();")
-print(f"K_dot(0,0) = {sp.ccode(K_dot[0,0])};")
-print(f"K_dot(1,1) = {sp.ccode(K_dot[1,1])};")
-print(f"K_dot(2,2) = {sp.ccode(K_dot[2,2])};")
+sp.pprint(K_dot_simp)

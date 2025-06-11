@@ -3,7 +3,7 @@ import traceback
 import numpy as np
 import pyvista as pv
 
-from robot.kinematics import Compute_kine_traj, Compute_Workspace, Compute_Workspace_Sphere, arc, Compute_trajectory_from_data
+from robot.kinematics import Compute_kine_traj, Compute_kine_point, Compute_Workspace, Compute_Workspace_Sphere, arc, Compute_trajectory_from_data
 from robot.scene import Pyvista3DScene
 from robot.dynamics import Plot_velo_accel
 from PyQt5 import QtWidgets, QtCore
@@ -274,10 +274,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.m_1, self.m_2, self.m_3, self.m_d = constants()
 
         # Origin position
-        r, theta, phi = Cartesian_to_spherical(0.15, 0.0, 0.2, self.vec_elbow, 1)
+        r, theta, phi = Cartesian_to_spherical(0.15, 0, 0.2, self.vec_elbow, 1)
         self.theta_0 = theta # rad
         self.phi_0 = phi # rad
         self.x_0, self.y_0, self.z_0 = Spherical_to_cartesian(self.l_arm_proth, self.theta_0, self.phi_0, self.vec_elbow)
+
+        theta_1a, theta_1b, theta_2a, theta_2b, theta_3a, theta_3b = Compute_kine_point(self.x_0, self.y_0, self.z_0, False, 1)
+        print(theta_1a, theta_1b, theta_2a, theta_2b, theta_3a, theta_3b)
 
         self.p_0 = np.array([self.x_0, self.y_0, self.z_0])
 
@@ -990,6 +993,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.m_2_point, self.m_3_point, self.z_vec, self.N_points \
          = self.compute_kinematics(self.x_0, self.y_0, self.z_0, True)
 
+        print(self.s_1a[0, :], self.s_1b[0,:], self.s_2a[0, :], self.s_2b[0, :], self.s_3a[0, :], self.s_3b[0, :])
+
         self.worker_thread_velo = WorkerThreadVelo(
             self.theta, self.phi, self.theta_arc, self.phi_arc,
             self.omega_max, self.accel, self.p
@@ -1168,8 +1173,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 z_vec, self.resolution, self.fps
             )
 
-            self.visualizer.resampling(t=t_dyn)
-            self.start_PyVista_anim()
+            #self.visualizer.resampling(t=t_dyn)
+            #self.start_PyVista_anim()
             self.dynamics_traj = True
             self.simulate_dynamics_btn.setEnabled(True)
             return

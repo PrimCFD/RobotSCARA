@@ -19,6 +19,9 @@ def request_sil_simulation(trajectory: List[Dict]) -> List[Dict]:
 
     with socket.create_connection((host, port)) as sock:
 
+        # Steady position for Ziegler Nichols
+        # trajectory = [{"t": 0.0, "x": [0.15,0.0,0.2], "x_dot": [0.0,0.0,0.0], "x_ddot": [0.002,0.0,0.0]}, {"t": 2.5, "x": [0.15, 0.0, 0.2], "x_dot": [0.0,0.0,0.0], "x_ddot": [0.0,0.0,0.0]}]
+
         config = load_config()
 
         # Extract parameters

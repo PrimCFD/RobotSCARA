@@ -252,13 +252,34 @@ def Spherical_to_cartesian_accel(r, theta, phi, r_p, theta_p, phi_p, r_pp, theta
     return x_pp, y_pp, z_pp
 
 
-def t_physical(p, p_dot):
+def t_physical(p, p_dot, min_speed=1e-10):
+    # Calculate segment lengths between consecutive points
     diffs = np.diff(p, axis=0)
     segment_lengths = np.linalg.norm(diffs, axis=1)
 
+    # Calculate speeds at each point
     speeds = np.linalg.norm(p_dot.T, axis=1)
+
+    # Handle case with only one point
+    if len(p) == 1:
+        return np.array([0.0])
+
+    # Calculate average speeds between points
     avg_speeds = (speeds[:-1] + speeds[1:]) / 2
-    dt = segment_lengths / avg_speeds
+
+    # Handle stationary segments (where average speed is near zero)
+    # For zero-length segments, dt=0 regardless of speed
+    dt = np.zeros_like(segment_lengths)
+
+    # For non-zero segments with valid speed
+    non_zero_mask = (segment_lengths > 0) & (avg_speeds > min_speed)
+    dt[non_zero_mask] = segment_lengths[non_zero_mask] / avg_speeds[non_zero_mask]
+
+    # For non-zero segments with near-zero speed
+    zero_speed_mask = (segment_lengths > 0) & (avg_speeds <= min_speed)
+    dt[zero_speed_mask] = segment_lengths[zero_speed_mask] / min_speed
+
+    # Construct time vector
     t = np.concatenate(([0], np.cumsum(dt)))
     return t
 

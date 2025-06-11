@@ -66,7 +66,6 @@ def inv_kine(x, y, z, m_1, m_2, m_3, y_vec, z_vec, l_11, l_12, l_21, l_22, l_31,
         return s_1a, s_1b, s_2a, s_2b, s_3a, s_3b
 
     else:
-
         return theta_1a, theta_1b, theta_2a, theta_2b, theta_3a, theta_3b
 
 
@@ -174,14 +173,14 @@ def Compute_Workspace(x_limits, y_limits, z_limits, nx, ny, nz):
         valid_mask = ~np.isnan(all_thetas).any(axis=1)
 
         # Define bounds per joint solution
-        theta1a_mask = (theta_1a >= -np.pi) & (theta_1a <= 0)
-        theta1b_mask = (theta_1b >= -np.pi) & (theta_1b <= 0)
+        theta1a_mask = (theta_1a >= -2*np.pi) & (theta_1a <= 0)
+        theta1b_mask = (theta_1b >= -2*np.pi) & (theta_1b <= 0)
 
-        theta2a_mask = (theta_2a >= -np.pi) & (theta_2a <= 0)
-        theta2b_mask = (theta_2b >= -np.pi) & (theta_2b <= 0)
+        theta2a_mask = (theta_2a >= -2*np.pi) & (theta_2a <= 0)
+        theta2b_mask = (theta_2b >= -2*np.pi) & (theta_2b <= 0)
 
-        theta3a_mask = (theta_3a >= -np.pi) & (theta_3a <= 0)
-        theta3b_mask = (theta_3b >= 0) & (theta_3b <= np.pi)
+        theta3a_mask = (theta_3a >= -2*np.pi) & (theta_3a <= 0)
+        theta3b_mask = (theta_3b >= 0) & (theta_3b <= 2*np.pi)
 
         # Combine all angle constraints
         angle_mask = theta1a_mask & theta1b_mask & theta2a_mask & theta2b_mask & theta3a_mask & theta3b_mask

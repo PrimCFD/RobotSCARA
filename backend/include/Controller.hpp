@@ -13,9 +13,9 @@ struct TrajectoryPoint {
 class Controller {
 public:
     // Configuration parameters (settable)
-    Eigen::Vector3d Kp = Eigen::Vector3d(50, 50, 80);
-    Eigen::Vector3d Kd = Eigen::Vector3d(30, 30, 30);
-    Eigen::Vector3d Ki = Eigen::Vector3d(0, 0, 2);
+    Eigen::Vector3d Kp = Eigen::Vector3d(100.0, 100.0, 100.0);
+    Eigen::Vector3d Kd = Eigen::Vector3d(20.0, 20.0, 20.0);
+    Eigen::Vector3d Ki = Eigen::Vector3d(0.0, 0.0, 0.0);
     double torque_limit = 30.0;
     double integral_max = 1.0;
 

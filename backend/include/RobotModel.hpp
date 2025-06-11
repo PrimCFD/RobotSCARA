@@ -78,10 +78,8 @@ public:
 
     Eigen::Vector3d computeForwardDynamics(
         const Eigen::Vector3d& theta,
-        const Eigen::Vector3d& theta_dot,
         const Eigen::Vector3d& torque,
-        const Eigen::Vector3d& pos,            // Task-space position
-        const Eigen::Vector3d& vel          // Task-space velocity
+        const Eigen::Vector3d& pos
     ) const;
 
     // Torque computation (inverse dynamics)
@@ -111,21 +109,89 @@ public:
 
     struct IKSolution {
         Eigen::Vector3d theta;
-        bool valid = false;
+        bool valid;
+        double position_error;
+        int iterations;  // Track convergence
     };
 
-        // Helper functions for matrix computations
+    struct FKSolution {
+        Eigen::Vector3d position;
+        bool valid;
+        double constraint_error;
+    };
+
+    // Helper functions for matrix computations
     Eigen::Matrix3d dampedPseudoInverse(
         const Eigen::Matrix3d& matrix, 
-        double lambda_tikhonov = 1e-3, 
-        double epsilon_diag = 1e-8
+        double lambda_tikhonov = 1e-3
     ) const;
 
     IKSolution invKineSinglePoint(const Eigen::Vector3d& p, const Eigen::Vector3d& theta_prev) const;
 
+    RobotDynamics::IKSolution closedFormIK(
+    const Eigen::Vector3d& p, 
+    const Eigen::Vector3d& theta_prev) const;
+
+    Eigen::Matrix3d RobotDynamics::computeIKJacobian(
+    const Eigen::Vector3d& p, 
+    const Eigen::Vector3d& theta) const;
+
+    RobotDynamics::IKSolution iterativeIK(
+    const Eigen::Vector3d& p,
+    const Eigen::Vector3d& theta0,
+    double tolerance,
+    int max_iter) const;
+
 
     Eigen::Vector3d forwardKinematics(const Eigen::Vector3d& theta,
                                                  const Eigen::Vector3d& ref_pos) const;
+
+    Eigen::Vector3d forwardKinematicsAnalytic(
+        const Eigen::Vector3d& theta,
+        const Eigen::Vector3d& x_prev,
+        bool& ok) const;
+
+    RobotDynamics::FKSolution iterativeFK(
+    const Eigen::Vector3d& theta,
+    const Eigen::Vector3d& ref_pos,
+    double tolerance,
+    int max_iter) const;
+
+    Eigen::Vector3d constraintEquations(
+    const Eigen::Vector3d& p,
+    const Eigen::Vector3d& theta) const;
+
+    Eigen::Matrix3d RobotDynamics::computeConstraintJacobian(
+    const Eigen::Vector3d& p, 
+    const Eigen::Vector3d& theta) const;
+
+    // Helper functions for angle conversions
+    //θcpp₁ = θpy₁ + π/2
+    //θcpp₂ = θpy₂ + π/2
+    //θcpp₃ = θpy₃ − π/2
+
+    static constexpr double PI = 3.14159265358979323846;
+
+    static inline Eigen::Vector3d toCppAngles (const Eigen::Vector3d& th_py) {
+    return { th_py(0) + PI/2.0,
+             th_py(1) + PI/2.0,
+            th_py(2) - PI/2.0 };
+    }
+
+    static inline Eigen::Vector3d toPyAngles  (const Eigen::Vector3d& th_cpp) {
+        return { th_cpp(0) - PI/2.0,
+                th_cpp(1) - PI/2.0,
+                th_cpp(2) + PI/2.0 };
+    }
+
+    static inline Eigen::Vector3d toPyDq     (const Eigen::Vector3d& d_th_cpp) {
+        return { d_th_cpp(0), d_th_cpp(1), d_th_cpp(2) };
+    }
+
+    static inline Eigen::Vector3d toPyTorque (const Eigen::Vector3d& tau_cpp) {
+        return { tau_cpp(0),  tau_cpp(1),  tau_cpp(2) };
+    }
+
 
 private:
     bool initialized_;

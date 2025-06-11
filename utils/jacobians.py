@@ -9,6 +9,12 @@ a1x, a1y, a1z = sp.symbols('a1x a1y a1z')
 a2x, a2y, a2z = sp.symbols('a2x a2y a2z')
 a3x, a3y, a3z = sp.symbols('a3x a3y a3z')
 
+# Platform height (z dir size) (symbolic)
+d = sp.symbols('d')
+
+# Platform joint z offset from platform top (symbolic)
+v_1, v_2, v_3 = sp.symbols('v_1 v_2 v_3')
+
 # Link lengths (symbolic)
 l11, l12 = sp.symbols('l11 l12')  # Leg 1
 l21, l22 = sp.symbols('l21 l22')  # Leg 2
@@ -36,15 +42,15 @@ s3z = a3z + l31 * sp.sin(theta3)
 # Distal vectors (g_i = c - s_i)
 g1x = x - s1x
 g1y = y - s1y
-g1z = z - s1z
+g1z = z + (d - v_1) - s1z
 
 g2x = x - s2x
 g2y = y - s2y
-g2z = z - s2z
+g2z = z + (d - v_2) - s2z
 
 g3x = x - s3x
 g3y = y - s3y
-g3z = z - s3z
+g3z = z + (d - v_3) - s3z
 
 # =====================
 # Jacobian Matrix J
@@ -72,29 +78,9 @@ K33 = sp.Matrix([g3x, g3y, g3z]).dot(ds3_dtheta3)
 K = sp.diag(K11, K22, K33)
 
 # =====================
-# Velocity Relationships
-# =====================
-theta_dot = sp.Matrix([sp.symbols('dtheta1'), sp.symbols('dtheta2'), sp.symbols('dtheta3')])
-c_dot = sp.Matrix([sp.symbols('dx'), sp.symbols('dy'), sp.symbols('dz')])
-
-# Primary velocity equation: J·c_dot = K·theta_dot
-velocity_eq = sp.Eq(J * c_dot, K * theta_dot)
-
-# =====================
 # Output Results
 # =====================
 print("Jacobian Matrix J (3x3):")
 sp.pprint(J)
 print("\nJacobian Matrix K (3x3 diagonal):")
 sp.pprint(K)
-print("\nVelocity Equation: J·c_dot = K·theta_dot")
-sp.pprint(velocity_eq)
-
-# Optional: Compute inverse relationships
-print("\nInverse Velocity Relationship (theta_dot in terms of c_dot):")
-theta_dot_expr = sp.simplify(K.inv() * J * c_dot)
-sp.pprint(sp.Eq(theta_dot, theta_dot_expr))
-
-print("\nForward Velocity Relationship (c_dot in terms of theta_dot):")
-c_dot_expr = sp.simplify(J.inv() * K * theta_dot)
-sp.pprint(sp.Eq(c_dot, c_dot_expr))

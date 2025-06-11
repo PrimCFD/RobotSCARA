@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <stdexcept>
 
+
 TrajectoryPoint Controller::interpolateTrajectory(
     const std::vector<TrajectoryPoint>& traj,
     double t_query

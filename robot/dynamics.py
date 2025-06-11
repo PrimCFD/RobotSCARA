@@ -39,13 +39,13 @@ class Plot_velo_accel(QWidget):
                 ax.clear()
 
         joint_names = ['Joint 1', 'Joint 2', 'Joint 3']
-        plot_types = ['Position [rad]', 'Velocity [rad/s]', 'Torque [Nm]']
+        plot_types = ['Position [deg]', 'Velocity [rad/s]', 'Torque [Nm]']
 
         for i in range(3):  # For each joint
             # Position plot
             ax = self.axs[i, 0]
-            ax.plot(t, theta_sim[:, i], 'b-', linewidth=2, label='Simulated')
-            ax.plot(t, theta_ideal[:, i], 'r--', linewidth=2, label='Ideal')
+            ax.plot(t, theta_sim[:, i] * 180 / np.pi, 'b-', linewidth=2, label='Simulated')
+            ax.plot(t, theta_ideal[:, i] * 180 / np.pi, 'r--', linewidth=2, label='Ideal')
             ax.set_title(f'{joint_names[i]} Position')
             ax.set_ylabel(plot_types[0])
             ax.grid(True)
