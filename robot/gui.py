@@ -8,7 +8,7 @@ from robot.scene import Pyvista3DScene
 from robot.dynamics import Plot_velo_accel
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtGui import QDoubleValidator, QIcon
-from PyQt5.QtWidgets import QPushButton, QStyle
+from PyQt5.QtWidgets import QPushButton, QStyle, QProgressBar
 from robot.misc import constants, Cart_velocity_ramp, Cartesian_to_spherical, set_config, save_config, load_config, parse_simulation_result, Spherical_to_cartesian
 from scipy.spatial import ConvexHull, Delaunay
 from scipy.interpolate import interp1d
@@ -197,6 +197,8 @@ class DynamicsThread(QtCore.QThread):
     result_signal = QtCore.pyqtSignal(list)
     finished_signal = QtCore.pyqtSignal()
     error_signal = QtCore.pyqtSignal(str)
+    progress_signal = QtCore.pyqtSignal(int)
+    status_signal = QtCore.pyqtSignal(str)
 
     def __init__(self, trajectory_data):
         """
@@ -209,7 +211,7 @@ class DynamicsThread(QtCore.QThread):
     def run(self):
         try:
             # Send to SIL server
-            results = request_sil_simulation(self.trajectory_data)
+            results = request_sil_simulation(self.trajectory_data, self)
             self.result_signal.emit(results)
 
         except Exception as e:
@@ -280,7 +282,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.x_0, self.y_0, self.z_0 = Spherical_to_cartesian(self.l_arm_proth, self.theta_0, self.phi_0, self.vec_elbow)
 
         theta_1a, theta_1b, theta_2a, theta_2b, theta_3a, theta_3b = Compute_kine_point(self.x_0, self.y_0, self.z_0, False, 1)
-        print(theta_1a, theta_1b, theta_2a, theta_2b, theta_3a, theta_3b)
 
         self.p_0 = np.array([self.x_0, self.y_0, self.z_0])
 
@@ -419,12 +420,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.replay_measure_stop_button.setIcon(self.style().standardIcon(QStyle.SP_MediaStop))
         self.replay_measure_stop_button.clicked.connect(self.return_scene_to_visible)
 
-
         self.buffer_reading = False
         self.replay = False
         self.dynamics_traj = False
 
         self.setup_ui()
+
+        self.sim_progress = QProgressBar()
+        self.sim_progress.setVisible(False)
+        self.sim_progress.setMaximumHeight(14)  # slim
+        self.statusBar().addPermanentWidget(self.sim_progress)
 
         self.sil_server = SILServerProcess()
         self.sil_server.start(debug=True)
@@ -993,8 +998,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.m_2_point, self.m_3_point, self.z_vec, self.N_points \
          = self.compute_kinematics(self.x_0, self.y_0, self.z_0, True)
 
-        print(self.s_1a[0, :], self.s_1b[0,:], self.s_2a[0, :], self.s_2b[0, :], self.s_3a[0, :], self.s_3b[0, :])
-
         self.worker_thread_velo = WorkerThreadVelo(
             self.theta, self.phi, self.theta_arc, self.phi_arc,
             self.omega_max, self.accel, self.p
@@ -1079,6 +1082,10 @@ class MainWindow(QtWidgets.QMainWindow):
     def on_plot_window_closed(self):
         self.plot_window = None
 
+    def update_sim_label(self, text: str):
+        self.sim_progress.setTextVisible(True)
+        self.sim_progress.setFormat(f"{text} %p%")
+
     def run_dynamics_simulation(self):
         if not hasattr(self, 'simulation_logger'):
             QtWidgets.QMessageBox.warning(self, "No Trajectory", "No simulated trajectory logger object")
@@ -1086,6 +1093,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.simulate_dynamics_btn.setEnabled(False)
         self.simulate_dynamics_btn.setText("Computing...")
+
+        # show busy indicator
+        self.sim_progress.setRange(0, 100)
+        self.sim_progress.setVisible(True)
+
+        self.sim_progress.setValue(0)
+        self.sim_progress.setVisible(True)
 
         # Get the current trajectory data
         p_kine = self.p
@@ -1137,6 +1151,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Define thread and callbacks
         self.worker_thread_dynamics = DynamicsThread(trajectory_data)
+        self.worker_thread_dynamics.status_signal.connect(self.update_sim_label)
 
         def on_result(results):
             # Save new simulation result to buffer
@@ -1173,18 +1188,28 @@ class MainWindow(QtWidgets.QMainWindow):
                 z_vec, self.resolution, self.fps
             )
 
-            #self.visualizer.resampling(t=t_dyn)
-            #self.start_PyVista_anim()
+            self.visualizer.resampling(t=t_dyn)
+            self.start_PyVista_anim()
             self.dynamics_traj = True
             self.simulate_dynamics_btn.setEnabled(True)
             return
 
+        self.worker_thread_dynamics.progress_signal.connect(
+        lambda pct: self.sim_progress.setValue(pct)
+        )
+        self.worker_thread_dynamics.status_signal.connect(
+            lambda t: (self.sim_progress.setTextVisible(True),
+                       self.sim_progress.setFormat(f"{t} %p%"))
+        )
         self.worker_thread_dynamics.result_signal.connect(on_result)
         self.worker_thread_dynamics.error_signal.connect(self.handle_thread_error)
         self.worker_thread_dynamics.finished_signal.connect(
             lambda: self.simulate_dynamics_btn.setEnabled(True))
         self.worker_thread_dynamics.finished_signal.connect(
             lambda: self.simulate_dynamics_btn.setText("Simulate Dynamics"))
+        self.worker_thread_dynamics.finished_signal.connect(
+            lambda: self.sim_progress.setVisible(False)
+        )
         self.worker_thread_dynamics.start()
 
     def closeEvent(self, event):

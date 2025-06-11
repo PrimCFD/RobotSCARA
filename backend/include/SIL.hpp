@@ -3,27 +3,10 @@
 #include <vector>
 #include <Eigen/Dense>
 #include "Controller.hpp"
+#include "Types.hpp"
+#include "SocketUtils.hpp"
 
 constexpr size_t MAX_TRAJECTORY_POINTS = 50000;
-constexpr size_t MAX_FRAME_POINTS = 1000000;
-
-#pragma pack(push, 1)
-struct Waypoint {
-    double t;
-    double x[3];
-    double x_dot[3];
-    double x_ddot[3];
-};
-
-struct Frame {
-    double t;
-    double x[3];
-    double x_dot[3];
-    double theta[3];
-    double theta_dot[3];
-    double tau[3];
-};
-#pragma pack(pop)
 
 using Trajectory = std::vector<Waypoint>;
 
@@ -62,9 +45,7 @@ inline Frame CreateFrame(double t,
 
 TrajectoryPoint interpolateTrajectory(const Trajectory& traj, double t_query);
 
-void run_sil_simulation(
-    const std::vector<Waypoint>& binary_traj,
-    std::vector<Frame>& results_out,
-    std::vector<IdealTorquePoint>& ideal_torques_out,
-    const Eigen::Vector3d& elbow_pos,
-    double l_arm_proth);
+ void run_sil_streaming(const std::vector<Waypoint>& binary_traj,
+                        socket_t sock,
+                        const Eigen::Vector3d& elbow_pos,
+                        double l_arm_proth);

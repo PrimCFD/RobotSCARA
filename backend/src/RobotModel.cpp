@@ -193,7 +193,8 @@ Eigen::Matrix3d RobotDynamics::computeMassMatrix(const Eigen::Vector3d& theta,
     Eigen::Matrix3d M = Eigen::Matrix3d::Zero();
 
     // Add platform mass contribution (point mass at end effector)
-    Eigen::DiagonalMatrix<double, 3> m(params_.m_d + params_.m_arm / 3.0);
+    Eigen::DiagonalMatrix<double,3> m;
+    m.diagonal().setConstant(params_.m_d + params_.m_arm/3.0);
     
     // Proximal links with added distal point masses
     M(0,0) = (params_.m_11/3.0 + params_.m_12/2.0) * params_.l_11 * params_.l_11;

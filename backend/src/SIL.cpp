@@ -2,82 +2,24 @@
 #include "SIL.hpp"
 #include <Eigen/Dense>
 #include <cmath>
-#include <fstream>
 #include <iostream>
-#include <limits>
 #include <algorithm>
 
-void run_sil_simulation(
-    const std::vector<Waypoint>& binary_traj,
-    std::vector<Frame>& results_out,
-    std::vector<IdealTorquePoint>& ideal_torques_out,
-    const Eigen::Vector3d& elbow_pos,
-    double l_arm_proth)
-    {
+ void run_sil_streaming(const std::vector<Waypoint>& binary_traj,
+                        socket_t sock,
+                        const Eigen::Vector3d& elbow_pos,
+                        double l_arm_proth) {
 
     RobotDynamics robot_ideal;
     robot_ideal.loadHardcodedParams();
     robot_ideal.setElbowArm(elbow_pos, l_arm_proth);
-
-    // Pre-compute ideal torques
-    ideal_torques_out.clear();
-    ideal_torques_out.reserve(binary_traj.size());
-
-    Eigen::Vector3d theta_prev_py(-2.76, -0.38, 2.84);
-    Eigen::Vector3d theta_prev = robot_ideal.toCppAngles(theta_prev_py);
-
-    for (size_t i = 0; i < binary_traj.size(); ++i) {
-        const Waypoint& wp = binary_traj[i];
-        Eigen::Vector3d x(wp.x[0], wp.x[1], wp.x[2]);
-        Eigen::Vector3d x_dot(wp.x_dot[0], wp.x_dot[1], wp.x_dot[2]);
-        Eigen::Vector3d x_ddot(wp.x_ddot[0], wp.x_ddot[1], wp.x_ddot[2]);
-
-        // Solve IK
-        RobotDynamics::IKSolution ik_sol = robot_ideal.invKineSinglePoint(x, theta_prev);
-        if (!ik_sol.valid) {
-            ik_sol.theta = theta_prev;  // Use previous if invalid
-        }
-        theta_prev = ik_sol.theta;
-
-        // Compute inverse dynamics
-        RobotDynamics::DynamicsResult res = robot_ideal.computeInverseDynamics(x, x_dot, x_ddot, ik_sol.theta);
-
-        Eigen::Vector3d theta_py = robot_ideal.toPyAngles(ik_sol.theta);
-        Eigen::Vector3d theta_dot_py = robot_ideal.toPyDq(res.theta_dot);
-        Eigen::Vector3d tau_py = robot_ideal.toPyTorque(res.torque);
-
-
-        IdealTorquePoint itp;
-        itp.t = wp.t;
-        // Store joint positions/velocities
-        for (int j = 0; j < 3; j++) {
-            itp.theta[j] = theta_py(j);
-            itp.theta_dot[j] = theta_dot_py(j);
-        }
-        if (res.success) {
-            std::copy(tau_py.data(), tau_py.data()+3, itp.tau_ideal);
-        } else {
-            std::fill(itp.tau_ideal, itp.tau_ideal+3, 0.0);
-        }
-        ideal_torques_out.push_back(itp);
-    }
-
-    // Pre-allocate memory for results
-    size_t estimated_frames = static_cast<size_t>((binary_traj.back().t - binary_traj.front().t) * 1000);
-    results_out.reserve(std::min(estimated_frames, static_cast<size_t>(MAX_FRAME_POINTS)));
     
-    // Convert trajectory in chunks
+    // Trajcetory
     std::vector<TrajectoryPoint> traj;
     traj.reserve(binary_traj.size());
     
     for (size_t i = 0; i < binary_traj.size(); ++i) {
         traj.push_back(WaypointToTrajectoryPoint(binary_traj[i]));
-        
-        // Periodically report progress
-        if (i % 1000 == 0) {
-            std::cout << "Converting waypoints: " << i << "/" 
-                      << binary_traj.size() << std::endl;
-        }
     }
 
     // Ensure trajectory is valid
@@ -106,8 +48,6 @@ void run_sil_simulation(
     Eigen::Vector3d initial_guess = robot.toCppAngles(initial_guess_py);
     RobotDynamics::IKSolution init_sol = robot.invKineSinglePoint(x_0, initial_guess);
 
-    std::cout<<robot.toPyAngles(init_sol.theta).transpose()<<std::endl;
-
 
     if (!init_sol.valid) {
         throw std::runtime_error("No valid IK solution at t=0");
@@ -117,11 +57,7 @@ void run_sil_simulation(
     Eigen::Vector3d x_ref;
 
     // FK validation
-    std::cout<<x_0.transpose()<<std::endl;
     Eigen::Vector3d x0_fk = robot.forwardKinematics(init_sol.theta, x_0);
-
-    std::cout<<x0_fk.transpose()<<std::endl;
-
 
     if ((x0_fk - x_0).norm() > 1e-3) {
         std::cerr << "Warning: Initial FK error: " 
@@ -359,7 +295,10 @@ void run_sil_simulation(
                     Eigen::Vector3d torque_py =  robot.toPyTorque(torque);
 
                     Frame frame = CreateFrame(t, x, x_dot, theta_py, theta_dot_py, torque_py);
-                    results_out.push_back(frame);
+
+                    if (!send_all(sock, reinterpret_cast<const char*>(&frame), sizeof(Frame))) {
+                                throw std::runtime_error("Failed to send frame data");
+                            }
 
                     t += dt;
                     dt = std::min(dt * 1.2, dt_max);
@@ -400,7 +339,10 @@ void run_sil_simulation(
                     Eigen::Vector3d torque_py =  robot.toPyTorque(torque);
 
                     Frame frame = CreateFrame(t, x, x_dot, theta_py, theta_dot_py, torque_py);
-                    results_out.push_back(frame);
+
+                    if (!send_all(sock, reinterpret_cast<const char*>(&frame), sizeof(Frame))) {
+                        throw std::runtime_error("Failed to send frame data");
+                    }
                 }
             }
 
@@ -408,19 +350,6 @@ void run_sil_simulation(
             if (!theta.allFinite() || !x.allFinite()) {
                 throw std::runtime_error("Non-finite values detected");
                 return;
-            }
-
-            // Periodically check memory usage
-            if (results_out.size() % 10000 == 0) {
-                std::cout << "Simulation progress: t=" << t << "/" << t_final
-                        << " (" << (100 * t / t_final) << "%), "
-                        << results_out.size() << " frames" << std::endl;
-            }
-            
-            // Break if exceeding max frames
-            if (results_out.size() >= MAX_FRAME_POINTS) {
-                std::cerr << "Warning: Exceeded maximum frame count, truncating results" << std::endl;
-                break;
             }
         
         }
@@ -430,5 +359,57 @@ void run_sil_simulation(
         return;
     }
 
-    return;
+    // --- send 16-byte padding ---
+    Eigen::Vector3d fake_torque(0.0, 0.0, 0.0);
+    Frame frame = CreateFrame(t_final, x, x_dot, theta, theta_dot, fake_torque);
+    if (!send_all(sock, reinterpret_cast<const char*>(&frame), sizeof(Frame))) {
+        throw std::runtime_error("Failed to send phase marker");
+    }
+
+    // Pre-compute ideal torques
+
+    Eigen::Vector3d theta_prev_py(-2.76, -0.38, 2.84);
+    Eigen::Vector3d theta_prev = robot_ideal.toCppAngles(theta_prev_py);
+
+    for (size_t i = 0; i < binary_traj.size(); ++i) {
+        const Waypoint& wp = binary_traj[i];
+        Eigen::Vector3d x(wp.x[0], wp.x[1], wp.x[2]);
+        Eigen::Vector3d x_dot(wp.x_dot[0], wp.x_dot[1], wp.x_dot[2]);
+        Eigen::Vector3d x_ddot(wp.x_ddot[0], wp.x_ddot[1], wp.x_ddot[2]);
+
+        // Solve IK
+        RobotDynamics::IKSolution ik_sol = robot_ideal.invKineSinglePoint(x, theta_prev);
+        if (!ik_sol.valid) {
+            ik_sol.theta = theta_prev;  // Use previous if invalid
+        }
+        theta_prev = ik_sol.theta;
+
+        // Compute inverse dynamics
+        RobotDynamics::DynamicsResult res = robot_ideal.computeInverseDynamics(x, x_dot, x_ddot, ik_sol.theta);
+
+        Eigen::Vector3d theta_py = robot_ideal.toPyAngles(ik_sol.theta);
+        Eigen::Vector3d theta_dot_py = robot_ideal.toPyDq(res.theta_dot);
+        Eigen::Vector3d tau_py = robot_ideal.toPyTorque(res.torque);
+
+
+        IdealTorquePoint itp;
+        itp.t = wp.t;
+        // Store joint positions/velocities
+        for (int j = 0; j < 3; j++) {
+            itp.theta[j] = theta_py(j);
+            itp.theta_dot[j] = theta_dot_py(j);
+        }
+        if (res.success) {
+            std::copy(tau_py.data(), tau_py.data()+3, itp.tau_ideal);
+        } else {
+            std::fill(itp.tau_ideal, itp.tau_ideal+3, 0.0);
+        }
+
+        if (!send_all(sock, reinterpret_cast<const char*>(&itp), sizeof(IdealTorquePoint))) {
+               throw std::runtime_error("Failed to send ideal torque data");
+        }
+
+    }
+
+    return;                     
 }

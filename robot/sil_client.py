@@ -3,97 +3,103 @@ import struct
 from typing import List, Dict
 from robot.misc import load_config
 
-
-def request_sil_simulation(trajectory: List[Dict]) -> List[Dict]:
+def request_sil_simulation(trajectory: List[Dict], DynamicsThread) -> List[Dict]:
     """
-    Sends trajectory via binary protocol and receives simulated results.
-
-    Parameters:
-        trajectory: list of {"t": float, "x": [x,y,z], "x_dot": [vx,vy,vz], "x_ddot": [ax,ay,az]}
-
-    Returns:
-        list of frames with keys: t, x, x_dot, theta, theta_dot, tau
+    Sends trajectory via binary protocol and receives simulated results,
+    emitting progress (0–100%) separately for simulation then ideal data.
     """
     host = 'localhost'
     port = 5555
 
+    def recv_exact(sock: socket.socket, size: int) -> bytes:
+        """
+        Read exactly `size` bytes from the socket or raise ConnectionError.
+        """
+        data = bytearray()
+        while len(data) < size:
+            chunk = sock.recv(size - len(data))
+            if not chunk:
+                raise ConnectionError(f"Expected {size} bytes, got {len(data)} bytes before EOF")
+            data.extend(chunk)
+        return bytes(data)
+
     with socket.create_connection((host, port)) as sock:
-
-        # Steady position for Ziegler Nichols
-        # trajectory = [{"t": 0.0, "x": [0.15,0.0,0.2], "x_dot": [0.0,0.0,0.0], "x_ddot": [0.002,0.0,0.0]}, {"t": 2.5, "x": [0.15, 0.0, 0.2], "x_dot": [0.0,0.0,0.0], "x_ddot": [0.0,0.0,0.0]}]
-
+        # Load configuration and pack trajectory message
         config = load_config()
-
-        # Extract parameters
         elbow = config["elbow"]
         l_arm_proth = config["arm"]["l_arm_proth"]
-
-        # Build binary message
         n = len(trajectory)
-        message = struct.pack('<i', n)
-        # Add elbow position and arm parameters
-        message += struct.pack('<3d', elbow['x'], elbow['y'], elbow['z'])
-        message += struct.pack('<1d', l_arm_proth)
-
+        msg = struct.pack('<i', n)
+        msg += struct.pack('<3d', elbow['x'], elbow['y'], elbow['z'])
+        msg += struct.pack('<d', l_arm_proth)
         for wp in trajectory:
-            message += struct.pack('<10d',
-                                   wp['t'],
-                                   *wp['x'],
-                                   *wp['x_dot'],
-                                   *wp['x_ddot']
-                                   )
-        sock.sendall(message)
+            msg += struct.pack(
+                '<10d',
+                wp['t'],
+                *wp['x'],
+                *wp['x_dot'],
+                *wp['x_ddot']
+            )
+        sock.sendall(msg)
 
-        # Read new header (two 4-byte integers)
-        header = sock.recv(8)
-        if len(header) != 8:
-            raise ConnectionError("Incomplete header")
-        m, k = struct.unpack('<ii', header)  # m=sim frames, k=ideal points
+        # Read header: first an 8-byte double end_time, then a 4-byte int waypoint count
+        raw_end = recv_exact(sock, 8)
+        end_time = struct.unpack('<d', raw_end)[0]
 
-        # Read all frame data
-        frame_data = b''
-        remaining = m * 128  # 16 doubles * 8 bytes
-        while remaining > 0:
-            chunk = sock.recv(min(4096, remaining))
-            if not chunk:
-                raise ConnectionError("Incomplete frame data")
-            frame_data += chunk
-            remaining -= len(chunk)
+        raw_k = recv_exact(sock, 4)
+        k = struct.unpack('<i', raw_k)[0]
 
-        # Parse frames
-        simulation_frames = []
-        for i in range(m):
-            start = i * 128
-            values = struct.unpack_from('<16d', frame_data, start)
-            simulation_frames.append({
-                't': values[0],
-                'x': list(values[1:4]),
-                'x_dot': list(values[4:7]),
-                'theta': list(values[7:10]),
-                'theta_dot': list(values[10:13]),
-                'tau': list(values[13:16])
-            })
+        # -- Phase 1: Read simulation frames until timestamp >= end_time --
+        FRAME_BYTES = 16 * 8  # 16 doubles per frame
+        simulation_frames: List[Dict] = []
+        DynamicsThread.status_signal.emit('Computing simulation ... ')
+        DynamicsThread.progress_signal.emit(0)
 
-        # Read ideal data points (now including positions and velocities)
-        ideal_data = b''
-        remaining = k * 80  # 10 doubles * 8 bytes (t + 3 theta + 3 theta_dot + 3 tau)
-        while remaining > 0:
-            chunk = sock.recv(min(4096, remaining))
+        while True:
+            frame_chunk = recv_exact(sock, FRAME_BYTES)
+            vals = struct.unpack('<16d', frame_chunk)
+            frame = {
+                't': vals[0],
+                'x': list(vals[1:4]),
+                'x_dot': list(vals[4:7]),
+                'theta': list(vals[7:10]),
+                'theta_dot': list(vals[10:13]),
+                'tau': list(vals[13:16])
+            }
+            simulation_frames.append(frame)
+
+            pct_sim = int(frame['t'] / end_time * 100)
+            DynamicsThread.progress_signal.emit(min(pct_sim, 100))
+
+            if frame['t'] >= end_time:
+                simulation_frames.pop()
+                break
+
+        # -- Phase 2: Read ideal data --
+        IDEAL_BYTES = k * 10 * 8  # 10 doubles per waypoint
+        ideal_data = bytearray()
+
+        DynamicsThread.status_signal.emit('Computing ideal trajectory dynamics ... ')
+        DynamicsThread.progress_signal.emit(0)
+
+        while len(ideal_data) < IDEAL_BYTES:
+            chunk = sock.recv(min(4096, IDEAL_BYTES - len(ideal_data)))
             if not chunk:
                 raise ConnectionError("Incomplete ideal data")
-            ideal_data += chunk
-            remaining -= len(chunk)
+            ideal_data.extend(chunk)
+            pct_ideal = int(len(ideal_data) / IDEAL_BYTES * 100)
+            DynamicsThread.progress_signal.emit(min(pct_ideal, 100))
 
-        # Parse ideal data points
-        ideal_points = []
+        ideal_points: List[Dict] = []
         for i in range(k):
-            start = i * 80
-            values = struct.unpack_from('<10d', ideal_data, start)
+            offset = i * 10 * 8
+            vals = struct.unpack_from('<10d', ideal_data, offset)
             ideal_points.append({
-                't': values[0],
-                'theta': list(values[1:4]),
-                'theta_dot': list(values[4:7]),
-                'tau_ideal': list(values[7:10])
+                't': vals[0],
+                'theta': list(vals[1:4]),
+                'theta_dot': list(vals[4:7]),
+                'tau_ideal': list(vals[7:10])
             })
 
+        DynamicsThread.progress_signal.emit(100)
         return [simulation_frames, ideal_points]

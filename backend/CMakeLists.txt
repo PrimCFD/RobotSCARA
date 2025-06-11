@@ -45,6 +45,7 @@ add_executable(backend
     src/Controller.cpp
     src/RobotModel.cpp
     src/SIL.cpp
+    src/SocketUtils.cpp
 )
 
 # Create custom target for parameter generation
@@ -60,7 +61,6 @@ target_include_directories(backend PRIVATE
 if(WIN32)
     target_compile_definitions(backend PRIVATE 
         _CRT_SECURE_NO_WARNINGS
-        NOMINMAX
     )
     target_link_libraries(backend PRIVATE ws2_32)
 else()
