@@ -43,7 +43,7 @@ This will:
 - Build the C++ backend
 - Launch the GUI
 
-[![Launcher Demo](assets/images/Launcher.gif)
+![Launcher Demo](assets/images/Launcher.gif)
 
 ---
 
@@ -67,14 +67,67 @@ This will:
 The project uses a **modular client-server design** for simulation and control:
 
 ```mermaid
-graph TD;
-    A[PyQt GUI Client] -->|Trajectory Data| B(main_server.cpp);
-    C[HIL Client] -->|Sensor Data| D(HIL.cpp);
-    B --> D;
-    B -->|Simulate| E(SIL.cpp);
-    E -->|Results| B;
-    B -->|Render+Plot| A;
-    D -->|Actuation| C;
+%% SCARA robot – expanded data-flow / protocol map
+%%{init: { "flowchart": {
+      "layout": "elk",
+      "ranker": "tight-tree",
+      "rankSpacing": 50,
+      "nodeSpacing": 10
+} } }%%
+graph TD
+  %% ───────── Desktop (Python) ─────────
+  subgraph Desktop_Python["Desktop (Python)"]
+    SILC["client.py"]
+    SensorTh["serial_sensor.py<br/>thread"]
+        GUI["GUI<br/>PyQt + PyVista"]
+
+
+  end
+
+  %% ───────── C++ back-end binaries ─────────
+  subgraph CPP_Server["C++ server (backend/bin)"]
+    CppSrv["main_server.cpp<br/>TCP bridge + dispatcher"]
+    SIL["SIL.cpp<br/>RK4_5 at 1 kHz<br/>EPM dynamics + LQR MPC"]
+    HIL["HIL.cpp<br/>1000 Hz loop<br/>6-state Kalman + MPC"]
+    CppSrv -->|mode S| SIL
+    CppSrv -->|mode H| HIL
+  end
+
+  %% ───────── TCP bridge ─────────
+  subgraph TCP_Bridge["TCP localhost 5555"]
+    SILC -->|handshake header 1B mode 3 len strings| CppSrv
+    SILC -->|trajectory block int32 n elbow xyz l_arm 80B n| CppSrv
+    CppSrv -->|128B frame t x3 xdot3 theta3 thetadot3 tau3 1kHz 1000Hz| SILC
+  end
+
+  %% SIL feedback to server
+    SIL -->|mirror 128B frame| CppSrv
+
+  %% ───────── Hardware ─────────
+  subgraph Realtime_HW["HW"]
+    Sensor["Spherical angles sensors <br/>Potentiometers 0.3 deg<br/>t r theta phi CSV"]
+    Arduino["Arduino UNO R3<br/>250 kbaud<br/>freq to STEP DIR"]
+    EM["EM556s drivers x3<br/>200 kHz max"]
+    Motor["NEMA34 steppers"]
+
+    HIL -->|read CSV line| Sensor
+    HIL -->|ASCII cmd F fx fy fz dirBits| Arduino
+    Arduino -->|STEP DIR TTL| EM
+    EM --> Motor
+
+  end
+
+  SensorTh-->|read CSV line|Sensor
+
+
+  %% ───────── Styling classes ─────────
+  classDef py  fill:#e8f7ff,stroke:#0d8bf2,color:#036
+  classDef cpp fill:#fffbe6,stroke:#ec9c00,color:#8a5b00
+  classDef hw  fill:#f4faff,stroke:#1f6e43,color:#104623
+  class GUI,SensorTh,SILC py
+  class CppSrv,SIL,HIL cpp
+  class Sensor,Arduino,EM,Motor hw
+
 ```
 
 > ✅ Supports both **Software-in-the-Loop (SIL)** and **Hardware-in-the-Loop (HIL)** execution.
@@ -192,8 +245,8 @@ Includes:
 |--------------|---------------|---------------------------------------|
 | GUI          | ✅ Stable      | PyQt5 + PyVista                      |
 | SIL          | ✅ Operational | Adaptive dynamics simulation          |
-| HIL          | ✅ Operational | Real-time control with fixed-rate     |
-| IK/FK        | ✅ Validated   | Fully analytical with error handling  |
+| HIL          |  To be tested | Real-time control with fixed-rate     |
+| IK/FK        | ✅ Validated   | Analytical/Iterative with error handling  |
 | Dynamics     | ✅ Verified    | Lagrangian EPM model                  |
 | Logging      | ✅ Complete    | Replay and export ready               |
 

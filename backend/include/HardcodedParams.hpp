@@ -1,4 +1,4 @@
-// Auto-generated from C:/Users/antho/Desktop/COPR02/backend/../configs/temp.json
+// Auto-generated from C:/Users/antho/Desktop/COPR02/backend/../configs/initial.json
 #pragma once
 
 inline void loadHardcodedParams(RobotDynamics::RobotParams& params) {
@@ -31,7 +31,7 @@ inline void loadHardcodedParams(RobotDynamics::RobotParams& params) {
     params.m_31 = 0.3;
     params.m_32 = 0.75;
     params.m_d = 0.75;
-    params.m_arm = 2.5;
+    params.m_arm = 0.5;
 
     // Position vectors
     params.vec_shoulder = Eigen::Vector3d(0.5707940216581961, 0.5707940216581961, 0.25);

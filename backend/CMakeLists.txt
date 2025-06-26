@@ -14,7 +14,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_SOURCE_DIR}/../bin)
 
 # Configure parameter generation
 set(PARAM_GEN_SCRIPT ${CMAKE_SOURCE_DIR}/../utils/generate_params.py)
-set(INPUT_JSON ${CMAKE_SOURCE_DIR}/../configs/temp.json)
+set(INPUT_JSON ${CMAKE_SOURCE_DIR}/../configs/initial.json)
 set(GENERATED_HEADER ${CMAKE_SOURCE_DIR}/include/HardcodedParams.hpp)  # Output to backend/include
 
 # Determine Python executable path based on platform
@@ -43,6 +43,7 @@ set(LOCAL_INCLUDES
 add_executable(backend
     src/main_server.cpp
     src/Controller.cpp
+    src/HIL.cpp
     src/RobotModel.cpp
     src/SIL.cpp
     src/SocketUtils.cpp
@@ -63,6 +64,7 @@ if(WIN32)
         _CRT_SECURE_NO_WARNINGS
     )
     target_link_libraries(backend PRIVATE ws2_32)
+    add_compile_definitions(_WIN32_WINNT=0x0A00)
 else()
     # Linux-specific settings
     target_link_libraries(backend PRIVATE pthread)
@@ -70,5 +72,4 @@ endif()
 
 # Set common compile definitions
 target_compile_definitions(backend PRIVATE 
-    EIGEN_NO_MALLOC
 )

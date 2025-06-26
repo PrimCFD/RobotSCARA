@@ -91,10 +91,13 @@ def constants(cfg=None):
 
 
 def angular_dist(theta1, theta2, phi1, phi2):
-    return (np.arccos(
-        np.sin(theta1) * np.sin(theta2)
-        + np.cos(theta1) * np.cos(theta2) * np.cos(
-            phi1 - phi2)))
+    if not(theta1 == np.pi/2 and theta2 == np.pi/2):
+        return (np.arccos(
+            np.sin(theta1) * np.sin(theta2)
+            + np.cos(theta1) * np.cos(theta2) * np.cos(
+                phi1 - phi2)))
+    else:
+        return (phi2 - phi1)
 
 
 def Spherical_to_cartesian(r, theta, phi, center):

@@ -1,6 +1,7 @@
 #include "Controller.hpp"
 #include <algorithm>
 #include <stdexcept>
+#include <cmath>
 
 
 TrajectoryPoint Controller::interpolateTrajectory(
@@ -103,7 +104,7 @@ Eigen::Vector3d Controller::computeMPCTorque(
                                 Kp.cwiseProduct(error_pos) + 
                                 Kd.cwiseProduct(error_vel) + 
                                 Ki.cwiseProduct(integral_error);
-
+                                
     // Get Jacobian and dynamics
     Eigen::Matrix3d J = robot.computeJ(current_pos, theta);
     Eigen::Matrix3d J_dot = robot.computeJDot(current_vel, theta, theta_dot);
@@ -114,12 +115,113 @@ Eigen::Vector3d Controller::computeMPCTorque(
     Eigen::Matrix3d K_inv = robot.dampedPseudoInverse(K);
     Eigen::Vector3d theta_ddot_desired = K_inv * (- K_dot * theta_dot + (J * x_ddot_desired + J_dot * current_vel));
 
-    // Compute torque
+    // Compute Model
     Eigen::Matrix3d M = robot.computeMassMatrix(theta, current_pos);
     Eigen::Vector3d G = robot.computeGravity(theta, current_pos);
 
-    Eigen::Vector3d tau = M * theta_ddot_desired + G;
+    Eigen::Vector3d tau_desired = M * theta_ddot_desired + G;
 
-    // Apply torque limits
-    return tau.cwiseMax(-torque_limit).cwiseMin(torque_limit);
+    const std::array<double,3> Gr = {1.0, 1.0, 20.0}; // gear ratios
+
+    for (int i=0;i<3;++i) {
+        double tau_max = Gr[i]*eta_fw * K_t * Imax;
+        double tau_safe = 0.8 * tau_max;
+        // Real torque limit
+        // tau_desired[i] = std::clamp(tau_desired[i], -tau_safe, +tau_safe); 
+        tau_desired[i] = std::clamp(tau_desired[i], -30.0, +30.0);   
+    }
+
+
+    return tau_desired;
+}
+
+Eigen::Vector3d Controller::computeMPCStepRateTorque(
+    const TrajectoryPoint& desired_state,
+    const Eigen::Vector3d& current_pos,
+    const Eigen::Vector3d& current_vel,
+    const Eigen::Vector3d& current_accel,
+    const Eigen::Vector3d& theta,
+    const Eigen::Vector3d& theta_dot,
+    RobotDynamics& robot,
+    double dt,
+    Eigen::Vector3d& integral_error,
+    Eigen::Vector3d& delta_prev
+) const {
+    // Extract desired states
+    const Eigen::Vector3d& desired_pos = desired_state.x;
+    const Eigen::Vector3d& desired_vel = desired_state.x_dot;
+    const Eigen::Vector3d& desired_accel = desired_state.x_ddot;
+
+    // Compute errors
+    Eigen::Vector3d error_pos = desired_pos - current_pos;
+    Eigen::Vector3d error_vel = desired_vel - current_vel;
+
+    // Update integral error with anti-windup
+    integral_error += error_pos * dt;
+    integral_error = integral_error.cwiseMax(-integral_max).cwiseMin(integral_max);
+
+    // Combine accelerations
+    Eigen::Vector3d x_ddot_desired = desired_accel +
+                                Kp.cwiseProduct(error_pos) + 
+                                Kd.cwiseProduct(error_vel) + 
+                                Ki.cwiseProduct(integral_error);
+                                
+    // Get Jacobian and dynamics
+    Eigen::Matrix3d J = robot.computeJ(current_pos, theta);
+    Eigen::Matrix3d J_dot = robot.computeJDot(current_vel, theta, theta_dot);
+    Eigen::Matrix3d K = robot.computeK(current_pos, theta);
+    Eigen::Matrix3d K_dot = robot.computeKDot(current_pos, current_vel, theta, theta_dot);
+
+    // Convert task-space acceleration to joint-space
+    Eigen::Matrix3d K_inv = robot.dampedPseudoInverse(K);
+    Eigen::Vector3d theta_ddot_desired = K_inv * (- K_dot * theta_dot + (J * x_ddot_desired + J_dot * current_vel));
+
+    // Compute Model
+    Eigen::Matrix3d M = robot.computeMassMatrix(theta, current_pos);
+    Eigen::Vector3d G = robot.computeGravity(theta, current_pos);
+
+    Eigen::Vector3d tau_desired = M * theta_ddot_desired + G;
+
+    const std::array<double,3> Gr = {1.0, 1.0, 20.0}; // gear ratios
+    Eigen::Vector3d delta_des;
+    for (int i=0;i<3;++i) {
+        double tau_max = Gr[i]*eta_fw * K_t * Imax;
+        double tau_safe = 0.8 * tau_max;  
+        delta_des(i) = std::asin( std::clamp( tau_desired(i)/tau_safe, -1.0, 1.0) );
+    }
+
+
+    //  Open-loop phase-lag tracking
+    static Eigen::Vector3d delta_int = Eigen::Vector3d::Zero();// Integral lag error
+
+    if (integral_error.isZero(1e-12)) {
+        delta_int.setZero();
+    }
+    
+    constexpr double K_delta  = 8.0e3;   // pulses · s⁻¹ / rad
+    constexpr double Ki_delta = 2.0*K_delta;                          
+
+    Eigen::Vector3d rotor_vel_est;
+    Eigen::Vector3d f_pulse;
+    for (int i = 0; i < 3; ++i)
+    {
+        rotor_vel_est(i) = Gr[i] * theta_dot(i);
+
+        // lag error in (-π, π]
+        double err = std::atan2(std::sin(delta_des(i) - delta_prev(i)),
+                                std::cos(delta_des(i) - delta_prev(i)));
+
+        // PI on lag error (works without encoder)
+        delta_int(i) = delta_int(i) + err * dt;
+        double delta_rate = K_delta*err + Ki_delta*delta_int(i);   // rad s⁻¹
+
+        double theta_stator_rate = rotor_vel_est(i) + delta_rate;
+        f_pulse(i) = std::clamp(theta_stator_rate / (kMicroStepRad / Gr[i]),
+                                -pulses_max, +pulses_max);
+
+        delta_prev(i) += (theta_stator_rate - rotor_vel_est(i)) * dt;
+        delta_prev(i) = std::atan2(std::sin(delta_prev(i)), std::cos(delta_prev(i)));
+    }
+
+    return f_pulse;
 }

@@ -4,6 +4,23 @@
 #include <cmath>
 #include <iostream>
 #include <algorithm>
+#include <random>
+#include <chrono>
+
+// Sensor simulation
+const double ANGLE_RESOLUTION = 0.0052; // 0.3 degrees in radians
+
+// Helper function to quantize values
+double quantize(double value, double resolution, double noise_std = 0.0) {
+    static std::default_random_engine generator(
+        static_cast<unsigned>(std::chrono::system_clock::now().time_since_epoch().count()));
+    if (noise_std > 0.0) {
+        std::normal_distribution<double> distribution(0.0, noise_std);
+        double noise = distribution(generator);
+        value += noise;
+    }
+    return std::round(value / resolution) * resolution;
+}
 
  void run_sil_streaming(const std::vector<Waypoint>& binary_traj,
                         socket_t sock,
@@ -35,10 +52,15 @@
     // Create and configure controller
     Controller controller;
 
+    // Radial bias
+    double r_bias  = 0.0;      // will converge to the true error (m)
+
     // Use trajectory's starting point as initial state
     Eigen::Vector3d x_0 = traj.front().x;
     Eigen::Vector3d x_dot_0 = traj.front().x_dot;
     Eigen::Vector3d x_ddot_0 = traj.front().x_ddot;  // Capture initial acceleration
+
+    r_bias = (x_0 - elbow_pos).norm() - l_arm_proth;
 
     TrajectoryPoint target_ini;
     target_ini.t = 0.0, target_ini.x = x_0, target_ini.x_dot = x_dot_0, target_ini.x_ddot = x_ddot_0;
@@ -76,19 +98,7 @@
     Eigen::Vector3d theta_dot = K_inv_init * J_init * x_dot_0;
 
     Eigen::Vector3d integral_error = Eigen::Vector3d::Zero();
-
-    Eigen::Vector3d initial_torque = controller.computeMPCTorque(
-        target_ini,
-            x_0,        // current_pos
-            x_dot_0,    // current_vel
-            x_ddot_0,   // current_accel
-            theta,
-            theta_dot,
-            robot,
-            0.0,
-            integral_error);
-
-    Eigen::Vector3d theta_ddot = robot.computeForwardDynamics(theta, theta_dot, initial_torque, x_ref);
+    Eigen::Vector3d theta_ddot(0.0, 0.0, 0.0);
 
     // Initialize state variables
     Eigen::Vector3d x = x_ref;
@@ -98,27 +108,123 @@
     // Initialize torque to zero
     Eigen::Vector3d torque = Eigen::Vector3d::Zero();
 
+        // Add variables for measured states
+    Eigen::Vector3d x_measured = x;
+    Eigen::Vector3d x_dot_measured = x_dot_0;
+    Eigen::Vector3d x_ddot_measured = x_ddot_0;
+    Eigen::Vector3d theta_measured = theta;
+    Eigen::Vector3d theta_dot_measured = theta_dot;
+
+    
+    // Add history for velocity estimation
+    Eigen::Vector3d x_prev_measured = x;
+    Eigen::Vector3d theta_prev_measured = theta;
+    double t_prev_control = 0.0;
+
     // Controller rate setup (1ms period)
     const double control_dt = 0.001; // 1ms controller period
     double t_control_next = 0.0;     // Next controller update time
+
+    // Kalman Filter for velocity estimation
+    struct KalmanFilter3D {
+        Eigen::VectorXd state;   // [x, y, z, vx, vy, vz]^T
+        Eigen::MatrixXd P;       // Covariance matrix
+        double t_last;           // Time of last update
+        double sigma_a;          // Process noise (acceleration std dev)
+        double sigma_m;          // Measurement noise (position std dev)
+
+        KalmanFilter3D(double t0, const Eigen::Vector3d& pos0, 
+                      const Eigen::Vector3d& vel0, 
+                      double sigma_a_init, double sigma_m_init)
+            : sigma_a(sigma_a_init), sigma_m(sigma_m_init), t_last(t0)
+        {
+            state = Eigen::VectorXd(6);
+            state << pos0, vel0;
+            P = Eigen::MatrixXd::Zero(6,6);
+            // Initial covariance: position uncertainty from measurement noise,
+            // velocity uncertainty set high
+            P.topLeftCorner(3,3) = (sigma_m * sigma_m) * Eigen::Matrix3d::Identity();
+            P.bottomRightCorner(3,3) = 1000.0 * Eigen::Matrix3d::Identity();
+        }
+
+        void predict(double t_current) {
+            double dt = t_current - t_last;
+            if (dt <= 0) return; // No prediction needed
+
+            // State transition matrix (constant velocity model)
+            Eigen::MatrixXd F(6,6);
+            F.setIdentity();
+            F.topRightCorner(3,3) = dt * Eigen::Matrix3d::Identity();
+
+            // Process noise covariance
+            double dt2 = dt * dt;
+            double dt3 = dt2 * dt;
+            double dt4 = dt2 * dt2;
+            double sig2 = sigma_a * sigma_a;
+            Eigen::Matrix3d Q_pos = (dt4/4.0) * sig2 * Eigen::Matrix3d::Identity();
+            Eigen::Matrix3d Q_vel = dt2 * sig2 * Eigen::Matrix3d::Identity();
+            Eigen::Matrix3d Q_cross = (dt3/2.0) * sig2 * Eigen::Matrix3d::Identity();
+
+            Eigen::MatrixXd Q(6,6);
+            Q << Q_pos, Q_cross,
+                 Q_cross, Q_vel;
+
+            // Prediction step
+            state = F * state;
+            P = F * P * F.transpose() + Q;
+            t_last = t_current;
+        }
+
+        void update(const Eigen::Vector3d& z, double t) {
+            predict(t); // Predict to current time
+
+            // Measurement matrix (only position measured)
+            Eigen::MatrixXd H = Eigen::MatrixXd::Zero(3,6);
+            H.topLeftCorner(3,3) = Eigen::Matrix3d::Identity();
+            
+            // Measurement noise
+            Eigen::Matrix3d R = (sigma_m * sigma_m) * Eigen::Matrix3d::Identity();
+            
+            // Innovation
+            Eigen::Vector3d y = z - H * state;
+            Eigen::MatrixXd S = H * P * H.transpose() + R;
+            Eigen::MatrixXd K = P * H.transpose() * S.inverse();
+
+            // Update state and covariance
+            state += K * y;
+            Eigen::MatrixXd I = Eigen::MatrixXd::Identity(6,6);
+            P = (I - K * H) * P;
+        }
+
+        Eigen::Vector3d getPosition() const { return state.head<3>(); }
+        Eigen::Vector3d getVelocity() const { return state.tail<3>(); }
+    };
+
+    std::unique_ptr<KalmanFilter3D> kalman_filter;
+
+    const double delta_r_allowed = 0.0007;   // 0.7 mm allowable stretch
 
     // Adaptive stepping parameters
     double t = 0.0;
     double t_final = traj.back().t;
     double dt = 1e-6;
     double dt_min = 1e-8;
-    double dt_max = 1e-4;
+    double dt_max = 5e-5;
     bool first_step = true;
     int max_attempts = 50;
     int total_rejects = 0;
-    int max_total_rejects = 100000;
+    int max_total_rejects = 500000;
 
     // Error                
 
-    Eigen::VectorXd absTol(9), relTol(9);
-    absTol << 1e-4,1e-4,1e-4,     //  x,y,z
-            1e-4,1e-4,1e-4,     //  θ₁,θ₂,θ₃
-            1e-3,1e-3,1e-3;     //  θ̇
+    Eigen::VectorXd absTol(6), relTol(6);
+
+    // 0–2: joint angles (radians) – 1/2 µstep each axis
+    absTol.segment<3>(0).setConstant(0.5 * kMicroStepRad);
+
+    // 3–5: joint velocities (rad/s) – <1 ‰ of max_vel
+    absTol.segment<3>(3).setConstant(0.003);
+
     relTol.setConstant(1e-3);
 
     auto scaledError = [&](const Eigen::VectorXd& y_old,
@@ -153,21 +259,87 @@
             Eigen::Vector3d x_prev = x;  // Save previous valid reference
             Eigen::Vector3d integral_error_prev = integral_error;
 
+            double rho_prev = 1.0; 
+
             // --- CONTROLLER UPDATE AT FIXED RATE ---
             if (t >= t_control_next) {
+                // Convert true position to spherical coordinates
+                Eigen::Vector3d pos_rel = x - robot.params_.vec_elbow;
+                const double r0 = robot.params_.l_arm_proth;
+
+                auto sgn = [](double v)
+                {
+                    return v == 0.0 ? 0 : static_cast<int>(std::copysign(1.0, v));
+                };
+
+                double theta_sp = std::atan2(pos_rel.head<2>().norm(), pos_rel.z());
+                double phi_sp = std::atan2(pos_rel.y(), pos_rel.x());
+
+                theta_sp = quantize(theta_sp, ANGLE_RESOLUTION, 0.1*ANGLE_RESOLUTION);
+                phi_sp = quantize(phi_sp, ANGLE_RESOLUTION, 0.1*ANGLE_RESOLUTION);
+
+                const double r_true = pos_rel.norm();
+
+                // Enforce rigid-rod length: ρ = L + r_bias
+                const double r_est = r0 + r_bias; // L is l_arm_proth
+
+                x_measured = robot.params_.vec_elbow + (r_est) * Eigen::Vector3d(
+                                std::sin(theta_sp)*std::cos(phi_sp),
+                                std::sin(theta_sp)*std::sin(phi_sp),
+                                std::cos(theta_sp));
+                                
+                RobotDynamics::IKSolution sol_measured = robot.invKineSinglePoint(x_measured, theta_prev_measured);
+                theta_measured = sol_measured.theta;
+
+                constexpr double sigma_p = 3e-4;   // 0.3 mm ≈ pulse radius noise
+                constexpr double sigma_r = 1e-4;   // random-walk std per √s
+                double y = r_true - r0;       // measurement ρ – L
+                double err = y - r_bias;      // innovation
+
+                // RLS filter
+                static double P = 1e-3;               // initial variance
+                double Kgain = P / (P + sigma_p*sigma_p); // Kalman gain
+                r_bias += Kgain * err;
+                P = (1 - Kgain) * P + sigma_r*sigma_r;    // sigma_r ≈ 1e-5 m·√s
+
+                // Initialize or update Kalman filter
+                if (!kalman_filter) {
+                    double sigma_m = l_arm_proth * ANGLE_RESOLUTION; // Measure noise
+                    double sigma_a = 1e-2; // Process noise m.s^-2
+                    kalman_filter = std::make_unique<KalmanFilter3D>(
+                        t, x_measured, x_dot_0, sigma_a, sigma_m);
+                } else {
+                    kalman_filter->update(x_measured, t);
+                }
+
+                // Velocity estimation with low-pass filtering
+                x_dot_measured = kalman_filter->getVelocity();
+
+                // Joint velocity calculation
+                Eigen::Matrix3d J_meas = robot.computeJ(x_measured, theta_measured);
+                Eigen::Matrix3d K_meas = robot.computeK(x_measured, theta_measured);
+                Eigen::Matrix3d K_inv_meas = robot.dampedPseudoInverse(K_meas);
+                theta_dot_measured = K_inv_meas * J_meas * x_dot_measured;
+
+                // Update history
+                x_prev_measured = x_measured;
+                theta_prev_measured = theta_measured;
+                t_prev_control = t;
+
                 // Get desired state at current time
                 TrajectoryPoint target = controller.interpolateTrajectory(traj, t);
                 
-                // Update torque and integral_error using control_dt
+                // Update pulse using MEASURED states
+                static Eigen::Vector3d delta_prev = Eigen::Vector3d::Zero();
                 torque = controller.computeMPCTorque(
                     target,
-                    x,         // current_pos
-                    x_dot,     // current_vel
-                    x_ddot,    // current_accel
-                    theta,
-                    theta_dot,
+                    x_measured,      // measured position
+                    x_dot_measured,  // measured velocity
+                    x_ddot_measured, // measured acceleration => not used
+                    theta_measured,
+                    theta_dot_measured,
                     robot,
-                    control_dt, // Use fixed control period for integral
+                    control_dt,
                     integral_error
                 );
                 t_control_next += control_dt; // Schedule next update
@@ -183,7 +355,6 @@
             }
 
             // RK4 integration with proper state propagation
-
 
             while (!step_accepted && attempts < max_attempts) {
                 // Stage k1 - Use current x
@@ -218,26 +389,25 @@
 
                 // Compute error using state differences
                 Eigen::Vector3d error_theta = theta_rk4 - theta_rk3;
-                Eigen::Vector3d error_x = x_k4 - x_k3;
-                Eigen::Vector3d error_pos = error_theta.cwiseAbs() + error_x.cwiseAbs();
                 Eigen::Vector3d error_theta_dot = theta_dot_rk4 - theta_dot_rk3;
 
                 // Combine errors with scaling
-                Eigen::VectorXd  y_old(9), y_new(9), y_err(9);
-                y_old << x_prev, theta_prev, theta_dot_prev;
-                y_new << x_k4,   theta_rk4,  theta_dot_rk4;
-                y_err << (x_k4   - x_k3),
-                        (theta_rk4 - theta_rk3),
-                        (theta_dot_rk4 - theta_dot_rk3);
+                Eigen::VectorXd  y_old(6), y_new(6), y_err(6);
+                y_old << theta_prev, theta_dot_prev;
+                y_new <<theta_rk4,  theta_dot_rk4;
+                y_err << error_theta,
+                        error_theta_dot;
 
                 double rho = scaledError(y_old, y_new, y_err);
 
+                double safety = 0.9;
+                double max_scale = 5.0;
+                double min_scale = 0.3;
+
                 if (rho > 1.0) {
-                    double safety = 0.9;
-                    double max_scale = 5.0;
-                    double min_scale = 0.3;
+
                     if (rho > 0) {
-                        double scale = safety * std::pow(rho, -0.25);
+                        double scale = safety * std::pow(rho, -0.2) * std::pow(rho_prev, 0.04);
                         scale = std::clamp(scale, min_scale, max_scale);
                         dt = std::clamp(scale * dt, dt_min, dt_max);
                     }
@@ -287,7 +457,10 @@
                             }
 
                     t += dt;
-                    dt = std::min(dt * 1.2, dt_max);
+                    double scale = safety * std::pow(rho, -0.2) * std::pow(rho_prev, 0.04);
+                    scale = std::clamp(scale, min_scale, max_scale);
+                    dt = std::clamp(scale * dt, dt_min, dt_max);
+                    rho_prev = rho;
                     step_accepted = true;
                 }
             }
@@ -297,38 +470,7 @@
                     std::cerr << "Critical error: Minimum step size reached at t=" << t << std::endl;
                     break;
                 } else {
-                    // Force Euler step
-                    Eigen::Vector3d th_ddot = robot.computeForwardDynamics(theta, theta_dot, torque, x + dt * x_dot);
-                    theta_dot += dt * th_ddot;
-                    theta += theta_dot * dt;
-
-                    x = robot.forwardKinematics(theta, x_prev);
-
-                    // Update task-space variables
-                    Eigen::Matrix3d J = robot.computeJ(x, theta);
-                    Eigen::Matrix3d K = robot.computeK(x, theta);
-                    Eigen::Matrix3d J_inv = robot.dampedPseudoInverse(J);
-
-                    x_dot = J_inv * K * theta_dot;
-
-                    // Compute new task-space acceleration
-                    Eigen::Matrix3d J_dot = robot.computeJDot(x_dot, theta, theta_dot);
-                    Eigen::Matrix3d K_dot = robot.computeKDot(x, x_dot, theta, theta_dot);
-
-                    x_ddot = J_inv * (- J_dot * x_dot + (K * theta_ddot + K_dot * theta_dot));
-                    
-                    t += dt;
-
-                    // Build binary frame
-                    Eigen::Vector3d theta_py = robot.toPyAngles(theta);
-                    Eigen::Vector3d theta_dot_py =  robot.toPyDq(theta_dot);
-                    Eigen::Vector3d torque_py =  robot.toPyTorque(torque);
-
-                    Frame frame = CreateFrame(t, x, x_dot, theta_py, theta_dot_py, torque_py);
-
-                    if (!send_all(sock, reinterpret_cast<const char*>(&frame), sizeof(Frame))) {
-                        throw std::runtime_error("Failed to send frame data");
-                    }
+                    std::cerr << "Critical error: Couldn't make step converge or reach dt_min at t=" << t << std::endl;
                 }
             }
 

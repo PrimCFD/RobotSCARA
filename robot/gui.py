@@ -15,7 +15,8 @@ from scipy.interpolate import interp1d
 from skimage import measure
 from robot.measurement import TrajectoryLogger, SimulationLogger, FileBrowser
 from robot.sil_process import SILServerProcess
-from robot.sil_client import request_sil_simulation
+from robot.client import request_sil_simulation, request_hil
+from robot.serial_sensor import SensorThread
 
 
 # Button styles
@@ -221,6 +222,34 @@ class DynamicsThread(QtCore.QThread):
         finally:
             self.finished_signal.emit()  # Ensure this is always emitted
 
+class HILThread(QtCore.QThread):
+    result_signal = QtCore.pyqtSignal(list)
+    finished_signal = QtCore.pyqtSignal()
+    error_signal = QtCore.pyqtSignal(str)
+    progress_signal = QtCore.pyqtSignal(int)
+    status_signal = QtCore.pyqtSignal(str)
+
+    def __init__(self, trajectory_data,
+                 sensor_dev='/dev/ttyUSB0',
+                 arduino_dev='/dev/ttyUSB1'):
+        super().__init__()
+        self.trajectory_data = trajectory_data
+        self.sensor_dev = sensor_dev
+        self.arduino_dev = arduino_dev
+
+    def run(self):
+        try:
+            results = request_hil(
+                self.trajectory_data,
+                self.sensor_dev,
+                self.arduino_dev,
+                self)
+            self.result_signal.emit(results)
+        except Exception as e:
+            self.error_signal.emit(f"HIL run failed: {e}")
+        finally:
+            self.finished_signal.emit()
+
 
 class MainWindow(QtWidgets.QMainWindow):
     """
@@ -261,8 +290,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.n_phi = 250
 
         # Target angle movement (initial default values)
-        self.theta = 15  # Angle in the sagittal plane deg
-        self.phi = 20  # Angle in the horizontal plane deg
+        self.theta = 0.0  # Angle in the sagittal plane deg
+        self.phi = 5.0  # Angle in the horizontal plane deg
 
         self.elbow_changed = False
 
@@ -281,13 +310,19 @@ class MainWindow(QtWidgets.QMainWindow):
         self.phi_0 = phi # rad
         self.x_0, self.y_0, self.z_0 = Spherical_to_cartesian(self.l_arm_proth, self.theta_0, self.phi_0, self.vec_elbow)
 
-        theta_1a, theta_1b, theta_2a, theta_2b, theta_3a, theta_3b = Compute_kine_point(self.x_0, self.y_0, self.z_0, False, 1)
-
         self.p_0 = np.array([self.x_0, self.y_0, self.z_0])
 
         # Speed ramp
         self.omega_max = 5 * np.pi / 180  # rad.s^-1
         self.accel = 10 * np.pi / 180  # rad.s^-2
+
+        self.latest_theta = None
+        self.latest_phi   = None
+
+        # Start background listener
+        self.sensor_thread = SensorThread('auto', 115200, self)
+        self.sensor_thread.new_angles.connect(self._on_sensor_sample)
+        self.sensor_thread.start()
 
         # Plot Window
         self.plot_window = None
@@ -334,6 +369,15 @@ class MainWindow(QtWidgets.QMainWindow):
         """)
         self.simulate_dynamics_btn.clicked.connect(self.run_dynamics_simulation)
         self.simulate_dynamics_btn.setEnabled(False)
+
+        self.hil_btn = QPushButton("Loading Workspace …")
+        self.hil_btn.setStyleSheet("""
+        QPushButton:disabled { background-color: #f0f0f0;
+            color: #a0a0a0;
+            border: 1px solid #c0c0c0;}
+        """)
+        self.hil_btn.clicked.connect(self.run_hil)
+        self.hil_btn.setEnabled(False)
 
         # Button to change target position
         self.target_btn = QPushButton("Change Target Position")
@@ -500,6 +544,8 @@ class MainWindow(QtWidgets.QMainWindow):
         play_layout = QtWidgets.QHBoxLayout(play_group)
         play_layout.addWidget(self.start_btn)
         play_layout.addWidget(self.simulate_dynamics_btn)
+        play_layout.addWidget(self.hil_btn)
+
 
         analysis_group = QtWidgets.QGroupBox("Analysis")
         analysis_layout = QtWidgets.QVBoxLayout(analysis_group)
@@ -733,6 +779,14 @@ class MainWindow(QtWidgets.QMainWindow):
                         """)
         self.simulate_dynamics_btn.setEnabled(True)
 
+        self.hil_btn.setEnabled(True)
+        self.hil_btn.setStyleSheet("""
+                        QPushButton {
+                            font-weight: bold;
+                        }
+                        """)
+        self.hil_btn.setText("Run HIL")
+
     def toggle_workspace_visibility(self):
         visible = self.toggle_button_workspace.isChecked()
         self.Workspace.SetVisibility(visible)
@@ -765,11 +819,26 @@ class MainWindow(QtWidgets.QMainWindow):
         angles = self.read_sensor()
         self.trajectory_logger.log_frame(angles)
 
+    def _on_sensor_sample(self, th, ph):
+        self.latest_theta = th
+        self.latest_phi   = ph
+
+    def _restart_sensor(self):
+        self.latest_theta = self.latest_phi = None
+        self.sensor_thread = SensorThread('/dev/ttyUSB0', 115200, self)
+        self.sensor_thread.new_angles.connect(self._on_sensor_sample)
+        self.sensor_thread.start()
+
     def read_sensor(self):
-        frame = self.visualizer.frame_count
-        p = self.visualizer.p[min(frame, self.visualizer.max_frames-1)]
-        r, theta, phi = Cartesian_to_spherical(p[0], p[1], p[2], self.vec_elbow, 1)
-        return [theta, phi]
+        if self.latest_theta is not None:
+            return [self.latest_theta, self.latest_phi]
+        else:
+            # fall back to synthetic angles (unchanged code path)
+            frame = self.visualizer.frame_count
+            p = self.visualizer.p[min(frame, self.visualizer.max_frames - 1)]
+            r, th, ph = Cartesian_to_spherical(p[0], p[1], p[2],
+                                               self.vec_elbow, 1)
+            return [th, ph]
 
     def start_PyVista_anim(self):
         if hasattr(self, 'visualizer'):
@@ -1211,6 +1280,83 @@ class MainWindow(QtWidgets.QMainWindow):
             lambda: self.sim_progress.setVisible(False)
         )
         self.worker_thread_dynamics.start()
+
+    def run_hil(self):
+        if not hasattr(self, 'simulation_logger'):
+            QtWidgets.QMessageBox.warning(self, "No Trajectory",
+                                          "No simulated trajectory logger object")
+            return
+
+        if self.sensor_thread.isRunning():
+            self.sensor_thread.stop()
+
+        # Disable UI + show busy indicator (same UX as SIL)
+        self.hil_btn.setEnabled(False)
+        self.hil_btn.setText("Running …")
+        self.sim_progress.setRange(0, 100)
+        self.sim_progress.setVisible(True)
+        self.sim_progress.setValue(0)
+
+        # Build the current Cartesian trajectory (identical code path)
+        p_kine = self.p
+        p_dot_kine, p_dotdot_kine, t_kine = Cart_velocity_ramp(
+            self.l_arm_proth, self.theta, self.phi,
+            self.theta_arc, self.phi_arc,
+            self.omega_max, self.accel, self.p)
+
+        trajectory_data = [{
+            "t": float(t_kine[i]),
+            "x": list(map(float, p_kine[i])),
+            "x_dot": list(map(float, p_dot_kine[:, i])),
+            "x_ddot": list(map(float, p_dotdot_kine[:, i]))
+        } for i in range(len(t_kine))]
+
+        self.worker_thread_hil = HILThread(trajectory_data)
+        self.worker_thread_hil.status_signal.connect(self.update_sim_label)
+        self.worker_thread_hil.progress_signal.connect(self.sim_progress.setValue)
+        self.worker_thread_hil.error_signal.connect(self.handle_thread_error)
+
+        def on_result(results):
+            simulation_frames = results[0]  # no ideal data in HIL
+
+            # unpack → numpy arrays (mini clone of parse_simulation_result)
+            t_dyn = np.array([f['t'] for f in simulation_frames])
+            p_dyn = np.array([f['x'] for f in simulation_frames])
+            p_dot_dyn = np.array([f['x_dot'] for f in simulation_frames]).T
+            theta_dyn = np.array([f['theta'] for f in simulation_frames])
+            tau_dyn = np.array([f['tau'] for f in simulation_frames])
+
+            # (re)compute inverse kinematics for the visualiser
+            p_0, phi_arc, theta_arc, p, vec_elbow, vec_shoulder, s1a, s1b, s2a, s2b, s3a, s3b, \
+            d, v1, v2, v3, m1, m2, m3, z_vec, _ = self.compute_kinematics(
+                p_dyn[:, 0], p_dyn[:, 1], p_dyn[:, 2], False)
+
+            self.visualizer.update_scene(
+                p_0, phi_arc, theta_arc,
+                p_dyn, p_dot_dyn,
+                vec_elbow, vec_shoulder,
+                s1a, s1b, s2a, s2b, s3a, s3b,
+                d, v1, v2, v3, m1, m2, m3,
+                z_vec, self.resolution, self.fps)
+
+            self.visualizer.resampling(t=t_dyn)
+            self.start_PyVista_anim()
+            self.dynamics_traj = True
+            self.hil_btn.setEnabled(True)
+            self.hil_btn.setText("Run HIL")
+
+        self.worker_thread_hil.result_signal.connect(on_result)
+
+        # Reset UI when thread finishes
+        self.worker_thread_hil.finished_signal.connect(
+            lambda: self.hil_btn.setEnabled(True))
+        self.worker_thread_hil.finished_signal.connect(
+            lambda: self.hil_btn.setText("Run HIL"))
+        self.worker_thread_hil.finished_signal.connect(
+            lambda: self.sim_progress.setVisible(False))
+        self.worker_thread_hil.finished_signal.connect(self._restart_sensor)
+
+        self.worker_thread_hil.start()
 
     def closeEvent(self, event):
         if hasattr(self, 'worker_thread_plot') and self.worker_thread_plot.isRunning():

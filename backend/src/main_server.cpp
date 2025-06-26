@@ -10,6 +10,7 @@
 #endif
 
 #include "SIL.hpp"
+#include "HIL.hpp"
 #include "SocketUtils.hpp"
 
 void handle_client(socket_t sock) {
@@ -18,6 +19,37 @@ void handle_client(socket_t sock) {
   #ifdef __linux__
         signal(SIGPIPE, SIG_IGN);
   #endif
+
+        //------------------------------------------------------------------
+        // Handshake -- first byte tells us SIL or HIL
+        //------------------------------------------------------------------
+        uint8_t mode = 'S';
+        if (!recv_all(sock, reinterpret_cast<char*>(&mode), 1))
+            throw std::runtime_error("Missing mode byte");
+        const bool isHIL = (mode == 'H');
+
+        //------------------------------------------------------------------
+        // In HIL mode two optional strings carry the serial device names
+        //------------------------------------------------------------------
+        auto readString = [&](std::string& s){
+            uint8_t n = 0;
+            if (!recv_all(sock, reinterpret_cast<char*>(&n), 1))
+                throw std::runtime_error("Missing length");
+            if(n){
+                s.resize(n);
+                if (!recv_all(sock, s.data(), n))
+                    throw std::runtime_error("Truncated string");
+            }
+        };
+
+        std::string sensorDev, arduinoDev;
+        if (isHIL){ readString(sensorDev); readString(arduinoDev); }
+ 
+
+        //------------------------------------------------------------------
+        // Legacy binary payload (identical for SIL & HIL)
+        //------------------------------------------------------------------
+        // Read waypoint count
 
         // Read waypoint count
         int32_t n = 0;
@@ -56,22 +88,44 @@ void handle_client(socket_t sock) {
             remaining -= this_chunk;
         }
 
-        // Send header: [ frameCount (s) | waypointCount ]
-        double end_time    = trajectory.back().t;
-        int32_t waypointCount = static_cast<int32_t>(trajectory.size());
+        if (!isHIL){
+            //------------------------------------------------------------------
+            // Software-in-the-Loop path 
+            //------------------------------------------------------------------
+            double end_time = trajectory.back().t;
+            int32_t waypointCount = static_cast<int32_t>(trajectory.size());
 
-        if (!send_all(sock,
-                    reinterpret_cast<const char*>(&end_time),
-                    sizeof(end_time)))
-            throw std::runtime_error("Failed to send header (end_time)");
+            if (!send_all(sock,
+                          reinterpret_cast<const char*>(&end_time),
+                          sizeof(end_time)))
+                throw std::runtime_error("Failed to send header (end_time)");
+            if (!send_all(sock,
+                          reinterpret_cast<const char*>(&waypointCount),
+                          sizeof(waypointCount)))
+                throw std::runtime_error("Failed to send header (waypointCount)");
 
-        if (!send_all(sock,
-                    reinterpret_cast<const char*>(&waypointCount),
-                    sizeof(waypointCount)))
-        throw std::runtime_error("Failed to send header (waypointCount)");
+            run_sil_streaming(trajectory, sock, elbow_pos, l_arm);
+        }else{
+            //------------------------------------------------------------------
+            // Hardware-in-the-Loop path 
+            //------------------------------------------------------------------
+            // Mirror the 16‑byte header expected by the Python client
+            double end_time = trajectory.back().t;
+            int32_t waypointCount = static_cast<int32_t>(trajectory.size());
 
-        // Stream simulation frames and ideal torques
-        run_sil_streaming(trajectory, sock, elbow_pos, l_arm);
+            if (!send_all(sock,
+                          reinterpret_cast<const char*>(&end_time),
+                          sizeof(end_time)))
+                throw std::runtime_error("Failed to send header (end_time)");
+            if (!send_all(sock,
+                          reinterpret_cast<const char*>(&waypointCount),
+                          sizeof(waypointCount)))
+                throw std::runtime_error("Failed to send header (waypointCount)");
+
+            run_hil_streaming(trajectory, sock, elbow_pos, l_arm,
+                              sensorDev.empty()?"/dev/ttyUSB0" : sensorDev,
+                              arduinoDev.empty()?"auto" : arduinoDev);
+        }
 
         // Half-close write end so client sees EOF
   #ifdef _WIN32
