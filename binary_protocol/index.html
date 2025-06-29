@@ -8,22 +8,24 @@
       
       
       
+        <link rel="canonical" href="https://PrimCFD.github.io/RobotSCARA/binary_protocol/">
       
       
       
-      <link rel="icon" href="/RobotSCARA/assets/images/favicon.png">
+      
+      <link rel="icon" href="../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.14">
     
     
       
-        <title>SCARA Robot Docs</title>
+        <title>Binary Protocol Specification - SCARA Robot Docs</title>
       
     
     
-      <link rel="stylesheet" href="/RobotSCARA/assets/stylesheets/main.342714a4.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.342714a4.min.css">
       
         
-        <link rel="stylesheet" href="/RobotSCARA/assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -42,7 +44,7 @@
       
     
     
-    <script>__md_scope=new URL("/RobotSCARA/",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -67,6 +69,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#binary-protocol-specification" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -77,7 +84,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="/RobotSCARA/." title="SCARA Robot Docs" class="md-header__button md-logo" aria-label="SCARA Robot Docs" data-md-component="logo">
+    <a href=".." title="SCARA Robot Docs" class="md-header__button md-logo" aria-label="SCARA Robot Docs" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -97,7 +104,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              
+              Binary Protocol Specification
             
           </span>
         </div>
@@ -194,7 +201,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="/RobotSCARA/docs/index.md" class="md-tabs__link">
+      <a href="../docs/index.md" class="md-tabs__link">
         
   
   
@@ -213,7 +220,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="/RobotSCARA/docs/control.md" class="md-tabs__link">
+      <a href="../docs/control.md" class="md-tabs__link">
         
   
   
@@ -232,7 +239,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="/RobotSCARA/docs/kindyn.md" class="md-tabs__link">
+      <a href="../docs/kindyn.md" class="md-tabs__link">
         
   
   
@@ -251,7 +258,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="/RobotSCARA/docs/binary_protocol.md" class="md-tabs__link">
+      <a href="../docs/binary_protocol.md" class="md-tabs__link">
         
   
   
@@ -286,7 +293,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="/RobotSCARA/." title="SCARA Robot Docs" class="md-nav__button md-logo" aria-label="SCARA Robot Docs" data-md-component="logo">
+    <a href=".." title="SCARA Robot Docs" class="md-nav__button md-logo" aria-label="SCARA Robot Docs" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -316,7 +323,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/RobotSCARA/docs/index.md" class="md-nav__link">
+      <a href="../docs/index.md" class="md-nav__link">
         
   
   
@@ -338,7 +345,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/RobotSCARA/docs/control.md" class="md-nav__link">
+      <a href="../docs/control.md" class="md-nav__link">
         
   
   
@@ -360,7 +367,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/RobotSCARA/docs/kindyn.md" class="md-nav__link">
+      <a href="../docs/kindyn.md" class="md-nav__link">
         
   
   
@@ -382,7 +389,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/RobotSCARA/docs/binary_protocol.md" class="md-nav__link">
+      <a href="../docs/binary_protocol.md" class="md-nav__link">
         
   
   
@@ -414,6 +421,79 @@
   
   
   
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#0-message-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      0. Message Flow
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-handshake-client-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Handshake (Client → Server)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-trajectory-payload-client-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Trajectory Payload (Client → Server)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-streaming-frame-server-client-sil-hil" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Streaming Frame (Server → Client, SIL &amp; HIL)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-idealtrajectory-packet-server-client-silonly" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Ideal‑Trajectory Packet (Server → Client, SIL‑only)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-serial-device-autodetection-hil-convenience" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Serial Device Auto‑Detection (HIL convenience)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-limits-constants" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. Limits &amp; Constants
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -425,8 +505,278 @@
             <div class="md-content" data-md-component="content">
               <article class="md-content__inner md-typeset">
                 
-  <h1>404 - Not found</h1>
+                  
 
+
+  
+    <a href="https://github.com/PrimCFD/RobotSCARA/edit/master/docs/binary_protocol.md" title="Edit this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="binary-protocol-specification">Binary Protocol Specification</h1>
+<blockquote>
+<p>Defines the byte‑level messages exchanged between the <strong>Python client / GUI</strong> and the unified <strong>C++ server</strong> (<code>main_server.cpp</code>) over TCP port <strong>5555</strong>. All multi‑byte scalars are <em>little‑endian</em>.</p>
+</blockquote>
+<hr />
+<h2 id="0-message-flow">0. Message Flow</h2>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>Client ── Handshake ──▶ Server
+Client ── Trajectory ─▶ Server
+Server ── Frames ─────▶ Client   (SIL &amp; HIL)
+Server ── Ideal pkt ──▶ Client   (SIL‑only)
+</code></pre></div></td></tr></table></div>
+<hr />
+<h2 id="1-handshake-client-server">1. Handshake (Client → Server)</h2>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Field</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><code>u8</code></td>
+<td><code>mode</code></td>
+<td>ASCII <code>'S'</code> (Software‑in‑the‑Loop) <strong>or</strong> <code>'H'</code> (Hardware‑in‑the‑Loop)</td>
+<td><code>'H'</code></td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>u8</code></td>
+<td><code>lenSensor</code></td>
+<td>Length of <code>sensor_dev</code> string (bytes) <em>(HIL only)</em></td>
+<td><code>9</code></td>
+</tr>
+<tr>
+<td>2‑…</td>
+<td><code>char</code></td>
+<td><code>sensor_dev</code></td>
+<td>Serial device for angle sensor</td>
+<td><code>/dev/ttyUSB0</code></td>
+</tr>
+<tr>
+<td>?</td>
+<td><code>u8</code></td>
+<td><code>lenArduino</code></td>
+<td>Length of <code>arduino_dev</code> string <em>(HIL only)</em></td>
+<td><code>4</code></td>
+</tr>
+<tr>
+<td>?</td>
+<td><code>char</code></td>
+<td><code>arduino_dev</code></td>
+<td>Serial device for Arduino step‑driver bridge</td>
+<td><code>auto</code></td>
+</tr>
+</tbody>
+</table>
+<p>In <strong>SIL</strong> mode the handshake stops after the single <code>mode</code> byte.</p>
+<hr />
+<h2 id="2-trajectory-payload-client-server">2. Trajectory Payload (Client → Server)</h2>
+<p>Immediately after the handshake, the client sends a <em>legacy</em> fixed‑layout block used by both SIL &amp; HIL paths.</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Field</th>
+<th>Count</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><code>int32</code></td>
+<td><code>nWp</code></td>
+<td>1</td>
+<td>Number of way‑points (≤ 1 000 000)</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>double</code></td>
+<td><code>elbow</code></td>
+<td>3</td>
+<td>Shoulder‑centred elbow position <strong>(x,y,z)</strong></td>
+</tr>
+<tr>
+<td>28</td>
+<td><code>double</code></td>
+<td><code>l_arm</code></td>
+<td>1</td>
+<td>Prosthetic arm length</td>
+</tr>
+<tr>
+<td>36</td>
+<td><code>struct</code></td>
+<td><code>wp[i]</code></td>
+<td><code>nWp</code></td>
+<td>Repeated <em>way‑point</em> block (see below)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Way‑point block</strong> (<code>&lt;10 × double = 80 B&gt;</code>):</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>{ t, x[3], x_dot[3], x_ddot[3] }
+</code></pre></div></td></tr></table></div>
+<p><code>t</code> is absolute time [s] from trajectory start.</p>
+<hr />
+<h2 id="3-streaming-frame-server-client-sil-hil">3. Streaming Frame (Server → Client, SIL &amp; HIL)</h2>
+<p>During execution the server streams <strong>128‑byte frames</strong> at either the adaptive SIL step or the fixed HIL loop rate.</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Field</th>
+<th>Count</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><code>double</code></td>
+<td><code>t</code></td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>double</code></td>
+<td><code>x</code></td>
+<td>3</td>
+<td>Cartesian position</td>
+</tr>
+<tr>
+<td>32</td>
+<td><code>double</code></td>
+<td><code>x_dot</code></td>
+<td>3</td>
+<td>Cartesian velocity</td>
+</tr>
+<tr>
+<td>56</td>
+<td><code>double</code></td>
+<td><code>theta</code></td>
+<td>3</td>
+<td>Joint angles (rad)</td>
+</tr>
+<tr>
+<td>80</td>
+<td><code>double</code></td>
+<td><code>theta_dot</code></td>
+<td>3</td>
+<td>Joint velocities</td>
+</tr>
+<tr>
+<td>104</td>
+<td><code>double</code></td>
+<td><code>tau</code></td>
+<td>3</td>
+<td>Joint torques (Nm)</td>
+</tr>
+</tbody>
+</table>
+<p>Total: <strong>16 doubles = 128 bytes</strong>.</p>
+<hr />
+<h2 id="4-idealtrajectory-packet-server-client-silonly">4. Ideal‑Trajectory Packet (Server → Client, <strong>SIL‑only</strong>)</h2>
+<p>Once the numerical simulation finishes, SIL sends an <em>ideal</em> torque profile computed with the high‑fidelity model. The packet begins with a 12‑byte header after a SIL empty frame padding followed by <code>k</code> identical blocks.</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Field</th>
+<th>Count</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><code>double</code></td>
+<td><code>endTime</code></td>
+<td>1</td>
+<td>Final simulation time (s)</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>int32</code></td>
+<td><code>k</code></td>
+<td>1</td>
+<td>Number of way‑points in original trajectory</td>
+</tr>
+<tr>
+<td>12</td>
+<td><code>struct</code></td>
+<td><code>ideal[i]</code></td>
+<td><code>k</code></td>
+<td>Repeated <em>ideal</em> block</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Ideal block</strong> (<code>&lt;10 × double = 80 B&gt;</code>):</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>{ t, theta[3], theta_dot[3], tau_ideal[3] }
+</code></pre></div></td></tr></table></div>
+<hr />
+<h2 id="5-serial-device-autodetection-hil-convenience">5. Serial Device Auto‑Detection (HIL convenience)</h2>
+<p>If the <code>sensor_dev</code>/<code>arduino_dev</code> strings in the handshake are empty, defaults are used:</p>
+<ul>
+<li><code>sensor_dev</code> → <code>/dev/ttyUSB0</code></li>
+<li><code>arduino_dev</code> → <code>'auto'</code> → server tries to locate a compatible Arduino UNO by <strong>VID/PID</strong> or <code>/dev/serial/by-id</code> symlink, mirroring the client‑side logic in <code>serial_sensor.py</code>. </li>
+</ul>
+<hr />
+<h2 id="6-limits-constants">6. Limits &amp; Constants</h2>
+<table>
+<thead>
+<tr>
+<th>Symbol</th>
+<th>Value</th>
+<th>Defined in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MAX_TRAJECTORY_POINTS</code></td>
+<td>1 000 000</td>
+<td><code>main_server.cpp</code></td>
+</tr>
+<tr>
+<td>Streaming frame size</td>
+<td>128 B</td>
+<td><code>Frame</code> struct in both SIL &amp; HIL</td>
+</tr>
+<tr>
+<td>Ring buffer length</td>
+<td>2 000 samples</td>
+<td><code>HIL.cpp</code> TrajectoryRingBuffer</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
               </article>
             </div>
           
@@ -462,10 +812,10 @@
     
     
       
-      <script id="__config" type="application/json">{"base": "/RobotSCARA/", "features": ["navigation.tabs", "navigation.sections", "content.code.copy", "content.action.edit", "content.code.annotate"], "search": "/RobotSCARA/assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.tabs", "navigation.sections", "content.code.copy", "content.action.edit", "content.code.annotate"], "search": "../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="/RobotSCARA/assets/javascripts/bundle.13a4f30d.min.js"></script>
+      <script src="../assets/javascripts/bundle.13a4f30d.min.js"></script>
       
         <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
       

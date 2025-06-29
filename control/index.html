@@ -252,6 +252,25 @@
   
 
       
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../docs/binary_protocol.md" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Server Protocol
+
+      </a>
+    </li>
+  
+
+      
     </ul>
   </div>
 </nav>
@@ -363,6 +382,28 @@
   
 
     
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../docs/binary_protocol.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Server Protocol
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
   </ul>
 </nav>
                   </div>
@@ -417,6 +458,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#implementation-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implementation Overview
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -460,6 +510,15 @@
   <a href="#embedded-friendly-design" class="md-nav__link">
     <span class="md-ellipsis">
       Embedded-Friendly Design:
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trajectory-ring-buffer" class="md-nav__link">
+    <span class="md-ellipsis">
+      Trajectory Ring Buffer
     </span>
   </a>
   
@@ -586,11 +645,28 @@
 <p>Ideal torque points (for analysis)</p>
 </li>
 </ul>
-<p><strong>Optimization:</strong></p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">constexpr</span><span class="w"> </span><span class="kt">size_t</span><span class="w"> </span><span class="n">MAX_SOCKET_CHUNK</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">;</span><span class="w">  </span><span class="c1">// 10MB chunks</span>
-<span class="k">constexpr</span><span class="w"> </span><span class="kt">size_t</span><span class="w"> </span><span class="n">FRAME_CHUNK_SIZE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">500</span><span class="p">;</span><span class="w">  </span><span class="c1">// Balance</span>
+<p><strong>Handshake – first byte tells us SIL or HIL; if mode 'H' two optional length‑prefixed strings follow (sensor device, Arduino device; defaults: <code>/dev/ttyUSB0</code>, auto‑detect)</strong> </p>
+<h3 id="implementation-overview">Implementation Overview</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>main() ──&gt; accept() loop ──&gt; thread(handle_client)
 </code></pre></div></td></tr></table></div>
+<p><em>Server startup</em>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="n">socket_t</span><span class="w"> </span><span class="n">server_fd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">socket</span><span class="p">(</span><span class="n">AF_INET</span><span class="p">,</span><span class="w"> </span><span class="n">SOCK_STREAM</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w">       </span><span class="c1">// POSIX / Winsock wrapper</span>
+<span class="n">setsockopt</span><span class="p">(</span><span class="n">server_fd</span><span class="p">,</span><span class="w"> </span><span class="n">SOL_SOCKET</span><span class="p">,</span><span class="w"> </span><span class="n">SO_REUSEADDR</span><span class="p">,</span><span class="w"> </span><span class="p">...);</span><span class="w">       </span><span class="c1">// fast restart</span>
+<span class="n">bind</span><span class="p">(</span><span class="n">server_fd</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;0.0.0.0:5555&quot;</span><span class="p">);</span><span class="w">                            </span><span class="c1">// PORT macro</span>
+<span class="n">listen</span><span class="p">(</span><span class="n">server_fd</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p">);</span><span class="w">                                      </span><span class="c1">// backlog</span>
+</code></pre></div></td></tr></table></div></p>
+<p><em>Per‑client worker (<code>handle_client</code>)</em><br />
+1. Parse mode byte (<code>'S'</code> for SIL, <code>'H'</code> for HIL).<br />
+2. In HIL, read two device strings <em>(len, bytes)</em>.<br />
+3. Read <code>int32 nWaypoints</code> + elbow <code>(ex,ey,ez)</code> + <code>l_arm</code> (double ×4).<br />
+4. Receive way‑points in ≤1000‑pt blocks until vector filled (max 1 M). 
+5. Dispatch to <code>run_sil_streaming</code> <strong>or</strong> <code>run_hil_streaming</code>.<br />
+6. In HIL, send 16‑byte header (<code>double endTime</code>, <code>int32 nWp</code>) before frame stream so GUI can pre‑allocate. <br />
+7. Half‑close socket (SHUT_WR / SD_SEND) to signal EOF, then let thread exit.  </p>
+<p>The accept loop detaches each worker thread, enabling parallel client sessions. For more details on the protocol see <a href="../binary_protocol/"><code>docs/binary_protocol.md</code></a></p>
 <h2 id="sil-simulation-pipeline-silcpp">SIL Simulation Pipeline (SIL.cpp)</h2>
 <h3 id="simulation-stages">Simulation Stages:</h3>
 <p><strong>Ideal Torque Precomputation:</strong></p>
@@ -603,6 +679,9 @@
 </li>
 </ul>
 <p><strong>Adaptive RK4 Integration:</strong></p>
+<blockquote>
+<p><strong>KalmanFilter3D</strong> — constant‑velocity EKF run every 1 ms to denoise <span class="arithmatex">\(\dot x\)</span> before torque computation</p>
+</blockquote>
 <ul>
 <li>
 <p>Uses error-controlled step sizing (Bogacki-Shampine method)</p>
@@ -618,13 +697,11 @@
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">// Adaptive stepping parameters</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">// Adaptive stepping parameters (Bogacki‑Shampine)</span>
 
-<span class="kt">double</span><span class="w"> </span><span class="n">dt</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.001</span><span class="p">;</span>
-<span class="kt">double</span><span class="w"> </span><span class="n">dt_min</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1e-6</span><span class="p">;</span>
-<span class="kt">double</span><span class="w"> </span><span class="n">dt_max</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1e-2</span><span class="p">;</span>
-<span class="kt">double</span><span class="w"> </span><span class="n">error_tol</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1e-3</span><span class="p">;</span><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;</span>
+<span class="kt">double</span><span class="w"> </span><span class="n">dt</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="mf">1e-6</span><span class="p">;</span>
+<span class="kt">double</span><span class="w"> </span><span class="n">dt_min</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="mf">1e-8</span><span class="p">;</span>
+<span class="kt">double</span><span class="w"> </span><span class="n">dt_max</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="mf">5e-5</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <p><strong>Real-time Constraints:</strong></p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
@@ -640,19 +717,19 @@
 <p><strong>Sensor Processing:</strong></p>
 <ul>
 <li>
-<p>Spherical coordinate input (r, θ, φ)</p>
+<p>Spherical coordinate input (r, θ, φ)</p>
 </li>
 <li>
-<p>Low-pass filters for noise reduction</p>
-</li>
-<li>
-<p>Finite-difference velocity estimation</p>
+<p><strong>6‑state KalmanPosVel</strong> filter for position &amp; velocity; lock‑step with 1 kHz loop</p>
 </li>
 </ul>
 <p><strong>Real-time Loop:</strong></p>
 <ul>
 <li>
-<p>Fixed-frequency execution (1kHz typical)</p>
+<p>Fixed‑frequency execution (1 kHz typical)</p>
+</li>
+<li>
+<p>Online <strong>range‑bias RLS estimator</strong> keeps rod‑length quasi constant</p>
 </li>
 <li>
 <p>Timing precision with std::chrono</p>
@@ -661,6 +738,11 @@
 <p>Overrun detection and logging</p>
 </li>
 </ul>
+<h3 id="trajectory-ring-buffer">Trajectory Ring Buffer</h3>
+<p>The HIL module maintains a <strong>2 000‑sample ring buffer</strong> of incoming way‑points (<code>TrajectoryRingBuffer</code>).  Samples are linearly interpolated on demand.  </p>
+<p>Expected CSV format:</p>
+<p><code>P,t,x,y,z,xd,yd,zd,xdd,ydd,zdd</code></p>
+<p>The host can stream additional segments in real‑time when the buffer runs low.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
