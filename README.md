@@ -19,6 +19,7 @@
 - ✅ **Trajectory Profiling + Velocity/Acceleration Control**
 - ✅ **Cross-platform: Windows / Linux / macOS**
 - ✅ **Data Logging, Buffering, and Trajectory Replay**
+- ✅ **Live trajectory streaming** — host can push quintic way‑points over TCP; HIL keeps a 2 k‑sample ring buffer
 
 ---
 
@@ -156,8 +157,9 @@ See [`docs/kindyn.md`](./docs/kindyn.md) for theory.
 - ✅ **Quintic trajectory interpolation** (C² smoothness)
 - ✅ **PID + Feedforward torque control**
 - ✅ **MPC-based acceleration inverse dynamics**
-- ✅ **Adaptive RK4 with Bogacki-Shampine integration (SIL)**
-- ✅ **Real-time 1kHz controller loop (HIL)**
+- ✅ **Adaptive RK4 with Bogacki‑Shampine integration (SIL)**
+- ✅ **6‑state Kalman filters** (Cartesian position + velocity) in both **SIL** & **HIL**
+- ✅ **Real‑time 1 kHz controller loop (HIL)**
 
 For details, refer to [`docs/control.md`](./docs/control.md)
 

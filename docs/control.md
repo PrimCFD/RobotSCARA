@@ -47,12 +47,31 @@ graph TD;
 
 - Ideal torque points (for analysis)
 
-**Optimization:**
+**Handshake – first byte tells us SIL or HIL; if mode 'H' two optional length‑prefixed strings follow (sensor device, Arduino device; defaults: `/dev/ttyUSB0`, auto‑detect)** 
 
-```cpp
-constexpr size_t MAX_SOCKET_CHUNK = 10 * 1024 * 1024;  // 10MB chunks
-constexpr size_t FRAME_CHUNK_SIZE = 500;  // Balance
+### Implementation Overview
 ```
+main() ──> accept() loop ──> thread(handle_client)
+```
+
+*Server startup*
+```cpp
+socket_t server_fd = socket(AF_INET, SOCK_STREAM, 0);       // POSIX / Winsock wrapper
+setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, ...);       // fast restart
+bind(server_fd, "0.0.0.0:5555");                            // PORT macro
+listen(server_fd, 10);                                      // backlog
+```
+
+*Per‑client worker (`handle_client`)*  
+1. Parse mode byte (`'S'` for SIL, `'H'` for HIL).  
+2. In HIL, read two device strings *(len, bytes)*.  
+3. Read `int32 nWaypoints` + elbow `(ex,ey,ez)` + `l_arm` (double ×4).  
+4. Receive way‑points in ≤1000‑pt blocks until vector filled (max 1 M). 
+5. Dispatch to `run_sil_streaming` **or** `run_hil_streaming`.  
+6. In HIL, send 16‑byte header (`double endTime`, `int32 nWp`) before frame stream so GUI can pre‑allocate.   
+7. Half‑close socket (SHUT_WR / SD_SEND) to signal EOF, then let thread exit.  
+
+The accept loop detaches each worker thread, enabling parallel client sessions. For more details on the protocol see [`docs/binary_protocol.md`](./binary_protocol.md)
 
 
 ## SIL Simulation Pipeline (SIL.cpp)
@@ -66,6 +85,8 @@ constexpr size_t FRAME_CHUNK_SIZE = 500;  // Balance
 - Calculates inverse dynamics for ideal torque values
 
 **Adaptive RK4 Integration:**
+> **KalmanFilter3D** — constant‑velocity EKF run every 1 ms to denoise $\dot x$ before torque computation
+
 
 - Uses error-controlled step sizing (Bogacki-Shampine method)
 
@@ -74,12 +95,11 @@ constexpr size_t FRAME_CHUNK_SIZE = 500;  // Balance
 - Handles singularities with damped pseudoinverse
 
 ```cpp
-// Adaptive stepping parameters
+// Adaptive stepping parameters (Bogacki‑Shampine)
 
-double dt = 0.001;
-double dt_min = 1e-6;
-double dt_max = 1e-2;
-double error_tol = 1e-3;</code>
+double dt      = 1e-6;
+double dt_min  = 1e-8;
+double dt_max  = 5e-5;
 ```
 
 **Real-time Constraints:**
@@ -94,21 +114,32 @@ if (results_out.size() >= MAX_FRAME_POINTS) break;</code>
 ## HIL Controller (HIL.cpp)
 
 ### Embedded-Friendly Design:
+
 **Sensor Processing:**
 
-- Spherical coordinate input (r, θ, φ)
+ - Spherical coordinate input (r, θ, φ)
 
-- Low-pass filters for noise reduction
-
-- Finite-difference velocity estimation
+ - **6‑state KalmanPosVel** filter for position & velocity; lock‑step with 1 kHz loop
 
 **Real-time Loop:**
 
-- Fixed-frequency execution (1kHz typical)
+- Fixed‑frequency execution (1 kHz typical)
+
+- Online **range‑bias RLS estimator** keeps rod‑length quasi constant
 
 - Timing precision with std::chrono
 
 - Overrun detection and logging
+
+### Trajectory Ring Buffer
+The HIL module maintains a **2 000‑sample ring buffer** of incoming way‑points (`TrajectoryRingBuffer`).  Samples are linearly interpolated on demand.  
+
+Expected CSV format:
+
+`P,t,x,y,z,xd,yd,zd,xdd,ydd,zdd`
+
+The host can stream additional segments in real‑time when the buffer runs low.
+
 
 ```cpp
 // Timing control example

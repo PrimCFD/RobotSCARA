@@ -46,3 +46,4 @@ nav:
   - Home: docs/index.md
   - Control Architecture: docs/control.md
   - Kinematics & Dynamics: docs/kindyn.md
+  - Server Protocol: docs/binary_protocol.md
