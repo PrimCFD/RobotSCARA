@@ -176,6 +176,7 @@ For details, refer to the [Control Pipeline page](https://primcfd.github.io/Robo
 
 ```bash
 📦 root/
+├── arduino/              # Arduino test and production codes
 ├── assets/               # Icons & media
 │   ├── scara_icon.ico/png
 │   └── images/           # GIFs, SVGs
