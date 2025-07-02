@@ -20,6 +20,7 @@ Welcome to the documentation for the **SCARA Robot Simulation & Control Suite** 
 - [Read Me](../README.md): Project setup and overview
 - [Control Architecture](./control.md): Server loop, SIL/HIL logic, and PID/MPC control
 - [Kinematics & Dynamics](./kindyn.md): Symbolic model, IK, Jacobians, and dynamic simplification
+- [Server protocol](./binary_protocol.md): C++ Server / Python Client protocol
 
 ---
 
