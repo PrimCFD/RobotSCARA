@@ -1,12 +1,13 @@
 # 🦾 SCARA Robot Simulation & Control Suite
 
 ![SCARA Robot Visualization](./assets/images/scara_icon.svg)
+
 **Advanced real‑time simulation and control platform for 3‑DOF SCARA‑like parallel robots**
 
 [![Docs](https://img.shields.io/badge/docs-online-blue)](https://primcfd.github.io/RobotSCARA/)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version 1.00](https://img.shields.io/badge/version-1.00-blue)](https://github.com/PrimCFD/RobotSCARA/releases)
+[![Version 1.0](https://img.shields.io/badge/version-1.0-blue)](https://github.com/PrimCFD/RobotSCARA/releases)
 
 ---
 
