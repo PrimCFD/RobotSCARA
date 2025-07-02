@@ -6,7 +6,7 @@
 [![Docs](https://img.shields.io/badge/docs-online-blue)](https://primcfd.github.io/RobotSCARA/)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version 0.90](https://img.shields.io/badge/version-0.90-blue)](https://github.com/yourusername/scara-robot/releases)
+[![Version 1.00](https://img.shields.io/badge/version-1.00-blue)](https://github.com/PrimCFD/RobotSCARA/releases)
 
 ---
 
