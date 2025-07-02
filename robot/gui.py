@@ -936,7 +936,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.file_browser.play_btn.setEnabled(False)
         self.replay_measure_button.setEnabled(False)
 
-        if (self.buffer_reading and self.trajectory_logger.empty_buffer) or \
+        if (self.buffer_reading and self.trajectory_logger.empty_buffer_measure) or \
                 (not self.buffer_reading and self.trajectory_logger.empty_file):
             QtWidgets.QMessageBox.warning(self, "Empty Data", "No trajectory data to animate.")
             self.return_scene_to_visible()
@@ -985,7 +985,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def handle_buffer(self):
         self.buffer_reading = True
         self.trajectory_logger.read_buffer()
-        if not self.trajectory_logger.empty_buffer:
+        if not self.trajectory_logger.empty_buffer_measure:
             results = self.trajectory_logger.results
             self.handle_traj_measure(results)
         else:

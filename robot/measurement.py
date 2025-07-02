@@ -41,7 +41,7 @@ class TrajectoryLogger:
         self.start_time = time.time()
 
     def log_frame(self, angles):
-        self.empty = False
+        self.empty_buffer_measure = False
         if self.start_time is None:
             raise RuntimeError("Call start_new_trajectory() before logging frames.")
         timestamp = time.time() - self.start_time
@@ -73,7 +73,7 @@ class TrajectoryLogger:
             QMessageBox.critical(None, "CSV Error", f"Failed to load trajectory CSV:\n{e}")
 
     def delete_buffer(self):
-        self.empty = True
+        self.empty_file_measure = True
         self.current_data = []
         self.save_to_buffer()
 

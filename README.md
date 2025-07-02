@@ -64,6 +64,27 @@ This will:
 | 🧠 Workspace Mapper     | Computes reachable volume and displays spherical workspace |
 | 💾 Data Logging         | CSV export + replay for recorded trajectories              |
 
+### Workspace
+
+![Workspace Demo](assets/images/Workspace.gif)
+
+### Elbow position
+
+![Elbow Demo](assets/images/Elbow.gif)
+
+### Kinematics
+
+![Kinematics Demo](assets/images/Kinematics.gif)
+
+### Dynamics
+
+![Dynamics Demo](assets/images/Dynamics.gif)
+
+
+### Data logging and visualization
+
+![Trajectory Demo](assets/images/Trajectory.gif)
+
 ---
 
 ## 🧠 Architecture Overview
